@@ -42,12 +42,15 @@ public class GameServer implements Runnable, ServerProtocol {
             try {
                 setup();
                 while (true) {
-                    view.showMessage("Listening for player connections...");
-                    Socket socket = serverSocket.accept();
-                    view.showMessage("New client connected!");
-                    GameClientHandler handler = new GameClientHandler(socket, this, String.valueOf(nextClientNo));
-                    new Thread(handler).start();
-                    clients.add(handler);
+                    if (clients.size() < 2) {
+                        view.showMessage("Listening for player connections...");
+                        Socket socket = serverSocket.accept();
+                        view.showMessage("New client connected!");
+                        GameClientHandler handler = new GameClientHandler(socket, this, String.valueOf(nextClientNo));
+                        new Thread(handler).start();
+                        clients.add(handler);
+                        nextClientNo++;
+                    } 
                 }
             } catch (ExitProgram ee) {
                 // If setup() throws an ExitProgram exception,
