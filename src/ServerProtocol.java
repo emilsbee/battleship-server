@@ -8,16 +8,30 @@ public interface ServerProtocol {
    public String getHello(String playerName);
    
    /**
-    * Generates a gameboard given a randomly generated fields with ships/water and a boolean indicating whether the client has to go first.
-    * @param board A double String array that represents the board. Contains values from the enum fieldState that make water and ships.
-    * @param isTurn A booleans representing whether it is the clients move.
-    * @return GameBoard to be sent to client as their board. It already has the ships placed and indicates with 
-    * a boolean whether the client receiving the board has the first move.
+    * Method that sends to player their opponents name. The message construct:
+    * ProtocolMessages.ENEMYNAME + ProtocolMessages.DELIMITER + playerName
+    * @param playerName the name of the player requesting the enemies name 
+    * @return the enemy name to send to the other player. 
     */
-   public GameBoard gameSetup(String[][] board, boolean isTurn);
+   public String enemyName(String playerName);
+
+   /**
+    * Since the players send their boards to the server, this method receives the board and adds it to the game.
+    * The received message is in the form: ProtocolMessages.CLIENTBOARD + ProtocolMessages.DELIMITER + board[][]
+    * @param board A double String array that represents the board. Contains values from the enum fieldState that make water and ships.
+    */
+   public void clientBoard(String[][] board, String playerName);
    
    /**
+    * Sends out to clients who begins the game.
+    * The message construct: ProtocolMessages.SETUP + ProtocolMessages.DELIMITER + playerName
+    * @return the name of player that goes first.
+    */
+   public String gameSetup();
+
+   /**
     * A move that the client makes.
+    * The construct of message received: ProtocolMessages.MOVE + ProtocolMessages.DELIMITER + xCoordinate + ProtocolMessages.DELIMITER + yCoordinate
     * @param x The x value of the move.
     * @param y The y value of the move
     * @return whether the move was a hit or a miss.
@@ -27,7 +41,10 @@ public interface ServerProtocol {
    /**
     * Method to update both clients after one of them has made a move. The update
     * includes the x,y coordinates of the move, whether the move was a hit, and whether
-    * the move sunk a ship and finally whether the client has the next move.
+    * the move sunk a ship and finally which  client has the next move.
+    * Message construct: ProtocolMessages.UPDATE + ProtocolMessages.DELIMITER + xCoordinate +
+    * ProtocolMessages.DELIMITER + yCoordinate + ProtocolMessages.DELIMITER + isHit + ProtocolMessages.DELIMITER +
+    * isSunk + ProtocolMessages.DELIMITER + playerName
     * @param x the x value of the previous move
     * @param y the y value of the previous move
     * @param isHit indicates whether previous move was a hit on a ship
@@ -38,10 +55,17 @@ public interface ServerProtocol {
    public String update(int x, int y, boolean isHit, boolean isSunk, boolean isTurn);
 
    /**
-    * Method that is called when game ends. This could happen if 5 minutes pass, someone sinks all of opponent's ships
+    * Method that informs clients when game ends. This could happen if 5 minutes pass, someone sinks all of opponent's ships
     * or one of the clients disconnects.
+    * The message construct: ProtocolMessages.GAMEOVER + ProtocolMessages.DELIMITER + result 
     * @param result integer from 0 to 2. 0: win, 1: lose, 2:tie.
     * @return the result of the game which is an int from 0 to 2 that represents whether the client won: 0, lost:1 or it is a tie:2.
     */
    public String gameOver(int result);
+
+   /**
+    * When one of the players indicates exit, the whole game is stopped and both players disconnected.
+    * Received message construct: ProtocolMessages.EXIT
+    */
+   public void exit();
 }

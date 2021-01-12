@@ -25,13 +25,12 @@ public class GameClientHandler implements Runnable {
 	 * @param server  The connected server
 	 * @param name The name of this GameClientHandler player
 	 */
-    public GameClientHandler(Socket socket, GameServer server, String name) {
+    public GameClientHandler(Socket socket, GameServer server) {
         try {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.socket = socket;
             this.server = server;
-            this.name = name;
         } catch (IOException e) {
             shutdown();
         }
@@ -60,13 +59,18 @@ public class GameClientHandler implements Runnable {
 	}
 
     private void handleCommand(String input) throws IOException {
-        if (input.split(";")[0].equals(ProtocolMessages.HELLO) && input.split(";").length >= 2) { // Handshake
+        if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE) && input.split(";").length >= 2) { // Handshake
             String playerName = input.split(";")[1];
+            this.name = playerName;
             out.write(server.getHello(playerName));
 		} else {
             out.write("ERROR: Name of the player must be included!");
 
         }
+    }
+
+    public String getName() {
+        return this.name;
     }
 
     /**

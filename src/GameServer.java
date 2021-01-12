@@ -12,8 +12,6 @@ public class GameServer implements Runnable, ServerProtocol {
     // List of GameClientHandlers, one for each client
     private List<GameClientHandler> clients;
 
-    // Next client number, increasing for every new connection 
-    private int nextClientNo;
 
     // The view of this GameServer
     private GameServerTUI view;
@@ -21,15 +19,14 @@ public class GameServer implements Runnable, ServerProtocol {
     public GameServer() {
         clients = new ArrayList<>();
         view = new GameServerTUI();
-        nextClientNo = 1;
     }
     public static void main(String[] args) {
         GameServer server = new GameServer();
-        System.out.println("Welcome to the Battleship game server!");
+        System.out.println("Welcome to the Battleship game servers!");
         new Thread(server).start();
     }
 
-    /**
+    /**sendMessage
      * Calls {@link #setup()} to open up a server socket. Then listens for new client connections and accepts them only until 
      * two clients have connected. 
      * 
@@ -46,10 +43,9 @@ public class GameServer implements Runnable, ServerProtocol {
                         view.showMessage("Listening for player connections...");
                         Socket socket = serverSocket.accept();
                         view.showMessage("New client connected!");
-                        GameClientHandler handler = new GameClientHandler(socket, this, String.valueOf(nextClientNo));
+                        GameClientHandler handler = new GameClientHandler(socket, this);
                         new Thread(handler).start();
                         clients.add(handler);
-                        nextClientNo++;
                     } 
                 }
             } catch (ExitProgram ee) {
@@ -95,11 +91,11 @@ public class GameServer implements Runnable, ServerProtocol {
  
 	@Override
 	public String getHello(String playerName) {
-		return ProtocolMessages.HELLO;
+		return ProtocolMessages.HANDSHAKE;
 	}
 
 	@Override
-	public GameBoard gameSetup(String[][] board, boolean isTurn) {
+	public String gameSetup() {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -120,5 +116,20 @@ public class GameServer implements Runnable, ServerProtocol {
 	public String gameOver(int result) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+	@Override
+	public String enemyName(String playerName) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	@Override
+	public void clientBoard(String[][] board, String playerName) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void exit() {
+		// TODO Auto-generated method stub
+		
 	}
 }
