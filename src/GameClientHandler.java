@@ -17,7 +17,8 @@ public class GameClientHandler implements Runnable {
     // Player's name
     private String name;
 
-
+    // The game
+    private Game game;
     /**
 	 * Constructs a new GameClientHandler. Opens the In- and OutputStreams.
 	 * 
@@ -25,12 +26,13 @@ public class GameClientHandler implements Runnable {
 	 * @param server  The connected server
 	 * @param name The name of this GameClientHandler player
 	 */
-    public GameClientHandler(Socket socket, GameServer server) {
+    public GameClientHandler(Socket socket, GameServer server, Game game) {
         try {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.socket = socket;
             this.server = server;
+            this.game = game;
         } catch (IOException e) {
             shutdown();
         }
@@ -47,7 +49,6 @@ public class GameClientHandler implements Runnable {
 		try {
             input = in.readLine();
             while (input != null) {
-                System.out.println("> " + name + " Incoming: " + input);
                 handleCommand(input);
                 out.newLine();
                 out.flush();
@@ -63,6 +64,7 @@ public class GameClientHandler implements Runnable {
             String playerName = input.split(";")[1];
             this.name = playerName;
             out.write(server.getHello(playerName));
+            game.setPlayer(this);
 		} else {
             out.write("ERROR: Name of the player must be included!");
 

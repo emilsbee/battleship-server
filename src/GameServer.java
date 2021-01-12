@@ -12,6 +12,8 @@ public class GameServer implements Runnable, ServerProtocol {
     // List of GameClientHandlers, one for each client
     private List<GameClientHandler> clients;
 
+    // The game
+    private Game game;
 
     // The view of this GameServer
     private GameServerTUI view;
@@ -19,10 +21,11 @@ public class GameServer implements Runnable, ServerProtocol {
     public GameServer() {
         clients = new ArrayList<>();
         view = new GameServerTUI();
+        game = new Game(view, this);
     }
     public static void main(String[] args) {
+        System.out.println(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET);
         GameServer server = new GameServer();
-        System.out.println("Welcome to the Battleship game servers!");
         new Thread(server).start();
     }
 
@@ -40,10 +43,10 @@ public class GameServer implements Runnable, ServerProtocol {
                 setup();
                 while (true) {
                     if (clients.size() < 2) {
-                        view.showMessage("Listening for player connections...");
+                        view.showMessage(TerminalColors.BLUE + "Listening for player connections..." + TerminalColors.RESET);
                         Socket socket = serverSocket.accept();
-                        view.showMessage("New client connected!");
-                        GameClientHandler handler = new GameClientHandler(socket, this);
+                        view.showMessage(TerminalColors.GREEN + "New client connected!" + TerminalColors.RESET);
+                        GameClientHandler handler = new GameClientHandler(socket, this, game);
                         new Thread(handler).start();
                         clients.add(handler);
                     } 
@@ -53,7 +56,7 @@ public class GameServer implements Runnable, ServerProtocol {
                 // stop the program.
                 openNewSocket = false;
             } catch (IOException ie) {
-                view.showMessage("A server IO error occurred: " + ie.getMessage());
+                view.showMessage(TerminalColors.RED_BOLD + "A server IO error occurred: " + ie.getMessage()+ TerminalColors.RESET);
                 openNewSocket = false;
             }
         }
@@ -71,12 +74,12 @@ public class GameServer implements Runnable, ServerProtocol {
             int port = view.getInt("Please enter the server port: ");
 
             try {
-                view.showMessage("Attempting to open a socket at 127.0.0.1 on port " + port + "...");
+                view.showMessage(TerminalColors.BLUE + "Attempting to open a socket at 127.0.0.1 on port " + port + "..." + TerminalColors.RESET);
                 serverSocket = new ServerSocket(port);
-                view.showMessage("Server started at port " + port);
+                view.showMessage(TerminalColors.GREEN + "Server started at port " + port + TerminalColors.RESET);
             } catch (IOException e) {
-                view.showMessage("ERROR: could not create a socket on 127.0.0.1" + " and port " + port + ".");
-                throw new ExitProgram("Game server stopped due to failed socket creation. Try again by starting server on a different port perhaps.");
+                view.showMessage(TerminalColors.RED_BOLD + "ERROR: could not create a socket on 127.0.0.1" + " and port " + port + "." + TerminalColors.RESET);
+                throw new ExitProgram(TerminalColors.RED_BOLD + "Game server stopped due to failed socket creation. Try again by starting server on a different port perhaps."+ TerminalColors.RESET);
             }
         }
     }

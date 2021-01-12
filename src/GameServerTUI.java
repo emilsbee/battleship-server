@@ -17,7 +17,7 @@ public class GameServerTUI {
 	}
 
     public int getInt(String question) {
-		System.out.print(question);
+		System.out.print(TerminalColors.PURPLE + question + TerminalColors.RESET);
 		while(true){
 			try {
 				return Integer.parseInt(in.next());
