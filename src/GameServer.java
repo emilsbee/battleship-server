@@ -18,12 +18,13 @@ public class GameServer implements Runnable, ServerProtocol {
     // The view of this GameServer
     private GameServerTUI view;
 
-    public GameServer() {
+    public GameServer() throws IOException {
         clients = new ArrayList<>();
         view = new GameServerTUI();
         game = new Game(view, this);
+        // new Thread(game).start();
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         System.out.println(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET);
         GameServer server = new GameServer();
         new Thread(server).start();

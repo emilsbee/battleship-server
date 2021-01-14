@@ -59,16 +59,26 @@ public class GameClientHandler implements Runnable {
         }
 	}
 
-    private void handleCommand(String input) throws IOException {
+    public void handleCommand(String input) throws IOException {
         if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE) && input.split(";").length >= 2) { // Handshake
             String playerName = input.split(";")[1];
             this.name = playerName;
             out.write(server.getHello(playerName));
+            out.newLine();
             game.setPlayer(this);
-		} else {
-            out.write("ERROR: Name of the player must be included!");
+		} 
+    }
 
-        }
+    public void sendMessage(String message)  {
+        if (out != null) {
+            try {
+                out.write(message);
+                out.newLine();
+                out.flush();
+            } catch (IOException e) {
+                e.getStackTrace();
+            }
+        } 
     }
 
     public String getName() {
