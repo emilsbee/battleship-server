@@ -35,8 +35,8 @@ public class Game implements Runnable{
                 view.showMessage("message");
                 while (true) {
                     if (init) {
-                        player1.sendMessage(ProtocolMessages.ENEMYNAME+ProtocolMessages.DELIMITER+player2.getName());
-                        player2.sendMessage(ProtocolMessages.ENEMYNAME+ProtocolMessages.DELIMITER+player1.getName());
+                        player1.sendMessage(server.enemyName(player2.getName()));
+                        player2.sendMessage(server.enemyName(player1.getName()));
                         init = false;
                     }
                 }
@@ -63,8 +63,8 @@ public class Game implements Runnable{
 
     public void startGame() {
         view.showMessage("game started");
-        player1.sendMessage(ProtocolMessages.ENEMYNAME+ProtocolMessages.DELIMITER+player2.getName());
-        player2.sendMessage(ProtocolMessages.ENEMYNAME+ProtocolMessages.DELIMITER+player1.getName());
+        player1.sendMessage(server.enemyName(player2.getName()));
+        player2.sendMessage(server.enemyName(player1.getName()));
     }
 
     public void endGame() {

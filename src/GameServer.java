@@ -98,6 +98,11 @@ public class GameServer implements Runnable, ServerProtocol {
 		return ProtocolMessages.HANDSHAKE;
 	}
 
+    @Override
+    public String enemyName(String playerName) {
+        return ProtocolMessages.ENEMYNAME + ProtocolMessages.DELIMITER + playerName;
+    }
+    
 	@Override
 	public String gameSetup() {
 		// TODO Auto-generated method stub
@@ -118,11 +123,6 @@ public class GameServer implements Runnable, ServerProtocol {
 
 	@Override
 	public String gameOver(int result) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	@Override
-	public String enemyName(String playerName) {
 		// TODO Auto-generated method stub
 		return null;
 	}
