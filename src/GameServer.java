@@ -56,6 +56,7 @@ public class GameServer implements Runnable, ServerProtocol {
                     } 
                 }
             } catch (ExitProgram ee) {
+                view.showMessage(TerminalColors.RED_BOLD + ee.getMessage()+ TerminalColors.RESET);
                 openNewSocket = false;
             } catch (IOException ie) {
                 view.showMessage(TerminalColors.RED_BOLD + "A server IO error occurred: " + ie.getMessage()+ TerminalColors.RESET);
@@ -80,6 +81,7 @@ public class GameServer implements Runnable, ServerProtocol {
                 serverSocket = new ServerSocket(port);
                 view.showMessage(TerminalColors.GREEN + "Server started at port " + port + TerminalColors.RESET);
             } catch (IOException e) {
+                view.showMessage(TerminalColors.RED_BOLD + "ERROR: could not create a socket on 127.0.0.1" + " and port " + port + "." + TerminalColors.RESET);
                 throw new ExitProgram(TerminalColors.RED_BOLD + "Game server stopped due to failed socket creation. Try again by starting server on a different port perhaps."+ TerminalColors.RESET);
             }
         }

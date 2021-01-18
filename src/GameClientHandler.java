@@ -19,13 +19,13 @@ public class GameClientHandler implements Runnable {
 
     // The game
     private Game game;
-
+    
     /**
-	 * Constructs a new GameClientHandler. Opens the ObjectInputStream and ObjectOutputStream.
-	 * Important to remember that ObjectOutputStream has to be created before the ObjectInputStream.
-	 * @param socket The client socket
-	 * @param server  The connected server
-	 * @param game The game instance
+     * Constructs a new GameClientHandler. Opens the ObjectInputStream and ObjectOutputStream.
+     * Important to remember that ObjectOutputStream has to be created before the ObjectInputStream.
+     * @param socket The client socket
+     * @param server  The connected server
+     * @param game The game instance
 	 */
     public GameClientHandler(Socket socket, GameServer server, Game game) {
         try {
@@ -70,7 +70,8 @@ public class GameClientHandler implements Runnable {
         try {
             board = (GameBoard) gameBoardIn.readObject();
             // board.printBoard(board.getBoard());
-            System.out.println("Board received!");
+            System.out.println(board.toString());
+            // gameBoardIn.close();
         } catch (IOException e) {
             shutdown();
         } 
@@ -93,7 +94,10 @@ public class GameClientHandler implements Runnable {
             game.setPlayer(this);
 		} else if (input.equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
             listenForGameBoard();
-        }
+        } 
+            if (!input.isEmpty()) {
+                System.out.println(input);  
+            }
     }
 
     /**
