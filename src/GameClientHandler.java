@@ -69,9 +69,6 @@ public class GameClientHandler implements Runnable {
         GameBoard board;
         try {
             board = (GameBoard) gameBoardIn.readObject();
-            // board.printBoard(board.getBoard());
-            System.out.println(board.toString());
-            // gameBoardIn.close();
         } catch (IOException e) {
             shutdown();
         } 

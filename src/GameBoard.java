@@ -1,139 +1,120 @@
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.awt.Point;
+
 
 public class GameBoard implements Serializable {
-    /**
-	 *
-	 */
-	private static final long serialVersionUID = 7688335136468996702L;
-	// Ship definitions
+	private static final long serialVersionUID = 6798175181929406915L;
+
+    private static String[] alphabet = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o"};
+
+    // Array of ships
+    private List<Ship> ships;
+
+
+    // Game board grid
+    private String[][] board;
+
+    // Ship definitions
     // First item in array is the size and second is amount of ships 
     private static final int[] CARRIER = {5, 2};
     private static final int[] BATTLESHIP = {4, 3};
     private static final int[] DESTROYER = {3, 5};
-    private static final int[] SUPER_PATROL = {2, 8};
+    private static final int[] SUPER_PATROL = {2, 8}; 
     private static final int[] PATROL_BOAT = {1, 10};
 
-    private static String[] alphabet = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o"};
     Random random;
-    String[][] board;
     
-    public GameBoard() {
-        random = new Random();
-        generateBoard();
-    }
 
-    public String[][] getBoard() {
-        return this.board;
+	public GameBoard(boolean manualPlacement) {
+        random = new Random();
+        ships = new ArrayList<>();
+        if (manualPlacement) {
+            manualBoard();  
+        } else {
+            generateBoard();
+        }
     }
 
     public void generateBoard() {
         String[][] newBoard = new String[15][10];
         newBoard = initialiseEmptyBoard(newBoard);
-        System.out.println("RUNS1");
+        
         placeShip(GameBoard.CARRIER, newBoard);
-        System.out.println("RUNS2");
         placeShip(GameBoard.BATTLESHIP, newBoard);
-        System.out.println("RUNS3");
         placeShip(GameBoard.DESTROYER, newBoard);
-        // System.out.println("RUNS4");
-        // placeShip(GameBoard.SUPER_PATROL, board);
-        // System.out.println("RUNS5");
-        // placeShip(GameBoard.PATROL_BOAT, board);
-        this.board = newBoard;
+        placeShip(GameBoard.SUPER_PATROL, newBoard);
+        placeShip(GameBoard.PATROL_BOAT, newBoard);
 
+        setBoard(newBoard);
+    }
+
+    public void setBoard(String[][] board) {
+        this.board = board;
+    }
+    
+
+    public String[][] getBoard() {
+        return this.board;
     }
 
     public void placeShip(int[] ship, String[][] board) {
-        for (int m = 0; m < ship[1]; m++) {
-
-            boolean fits = false;
-
-            if (ship[0] == 1) { // If the ship is only one field big
-                int x = random.nextInt(alphabet.length);
-                int y = random.nextInt(10);
-
-                while (!fits) {
-                    fits = !hasShipAround(board, x, y, y, x);
-                }    
-
-                board[x][y] = "SHIP";
-            } else { // If the ship is more than one field big
-                int xStart = 0;
-                int yStart = 0;
-                int direction = 0; // 0: Rightwards, 1: upwards, 2: leftwards, 3: downwards
-
-                while (!fits) {
-                    xStart = random.nextInt(alphabet.length);
-                    yStart = random.nextInt(10);
-                    
-                    direction = random.nextInt(3); 
-                    fits = doesFit(direction, board, ship[0], xStart, yStart);
-                }
+        for (int shipCount = 0; shipCount < ship[1]; shipCount++) { // Iterates over the number of ships
+            
+            /* Find free fields to place the ship */
+            boolean isPlaced = false;
+            int x = 0;
+            int y = 0;
+            while (!isPlaced) {
                 
-                if (direction == 0) { // If placement is rightwards
-                    
-                    for (int i = xStart; i <= xStart + (ship[0]-1); i++) {
-                        board[i][yStart] = "SHIP";
-                    }
+                x = random.nextInt(15);
+                y = random.nextInt(10);
 
-                } else if (direction == 1) { // If placement is upwards
-                    
-                    for (int j = yStart; j <= yStart + (ship[0]-1); j++) {
-                        board[xStart][j] = "SHIP";
-                    }
-
-                } else if (direction == 2) { // If placement is leftwards
-
-                    for (int k = xStart; k >= xStart - (ship[0]-1); k--) {
-                        board[k][yStart] = "SHIP";
-                    }
-
-                } else { // If placement is downwards
-
-                    for (int p = yStart; p >= yStart - (ship[0]-1); p--) {
-                        board[xStart][p] = "SHIP";
-                    }
-
-                }
+                isPlaced = doesFit(x, y, ship[0], board);
             }
+            
+            Point[] position = new Point[ship[0]];
+
+            /* Place the ship on board */
+            int count = 0;
+            for (int xPos = x; xPos < x + ship[0]; xPos++) {
+                board[xPos][y] = "SHIP";
+                position[count] = new Point(xPos, y); 
+                count++;
+            } 
+            /* Create ship instance and it to the ships list */
+            ships.add(new Ship(position));
         }
+
     }  
 
-    
-    private boolean doesFit(int checkDirection, String[][] board, int shipSize, int x, int y) {
-        if (checkDirection == 0 && x + (shipSize-1) < 15) { // Checks that ship fits on the board rightwards for x and y given
-            return !hasShipAround(board, x, y, y, x+(shipSize-1));
-        } else if (checkDirection == 1 && y + (shipSize-1) < 10) { // Checks that ship fits on the board upwards for x and y given
-            int upperMostY = y - (shipSize-1);
-            return !hasShipAround(board, x, upperMostY, y, x);
-        } else if (checkDirection == 2 && x - (shipSize-1) > -1) { // Checks that ship fits on the board leftwards for x and y given
-            int leftMostX = x - (shipSize-1);
-            return !hasShipAround(board, leftMostX, y, y, x);
-        } else if (checkDirection == 3 && y - (shipSize -1) > -1) { // Checks that ship fits on the board downwards for x and y given
-            return !hasShipAround(board, x, y, y+(shipSize-1), x);
-        } else { // If ship doesn't fit on the board
-            return false;
-        }
+    /**
+     * 
+     * @param x Random X coordinate 
+     * @param y Random Y coordinate
+     * @param shipSize The size of the ship to be checked
+     * @param board The game board
+     * @return Whether the ship fits on the board
+     */
+    public boolean doesFit(int x, int y, int shipSize, String[][] board) {
+        if (x + (shipSize-1) < 15) { // Checks whether ship fits on board
+
+            for (int i = x; i < x+shipSize; i++) { // Iterates over the fields that the ship would take up
+                if (board[i][y].equals("SHIP")) {
+                    return false;
+                } 
+            }
+            return true;
+        } 
+
+        return false;
     }
 
-    private boolean hasShipAround(String[][] board, int x, int y, int shipBottomY, int shipEndX) {
-        boolean hasShipAround = false;
-        for (int i = (y-1); i <= (shipBottomY+1); i++) { // Iterates over the rows going downwards. Basically from the row above the ship to the row below it
-
-            // If the current row is actually on the board since it could be that the boat is on board but it's on the top edge, so
-            // one row above the top edge does not exist, hence does not need to be checked for ships
-            if (i >= 0 && i <= 9) { // Row on board
-
-                for (int j = (x-1); j <= (shipEndX+1); j++) {
-                    if (j >= 0 && j <= 14 && board[j][i].equals("SHIP")) { // Column on board and the specific field has ship on it already return false
-                        hasShipAround = true;
-                    }
-                }
-            } 
-        }
-        return hasShipAround;
-    }
+    public void manualBoard() {
+        // Some comment
+    } 
 
     public String[][] initialiseEmptyBoard(String[][] board) {
         for (int i = 0; i < 15; i++) {
@@ -142,6 +123,15 @@ public class GameBoard implements Serializable {
             }
         }
         return board;
+    }
+
+    public boolean isShipEnd(int x, int y) {
+        for (Ship ship : ships) {
+            if (ship.getPositon()[ship.getLength()-1].getX() == x && ship.getPositon()[ship.getLength()-1].getY() == y) {
+                return true;
+            } 
+        }
+        return false;
     }
 
     public void printBoard(String[][] board) {
@@ -153,7 +143,8 @@ public class GameBoard implements Serializable {
                 for (int j = 0; j < 15; j++) {
                     System.out.print(" ");
                     System.out.print(" ");
-                    System.out.print(alphabet[j]);
+                    System.out.print(alphabet[j].toUpperCase());
+                    System.out.print(" ");
                     System.out.print(" ");
                     System.out.print(" ");
                 }
@@ -168,6 +159,23 @@ public class GameBoard implements Serializable {
             }
             /* ALPHABET AT THE TOP */
             
+
+            /* New line */
+            System.out.println(" "); 
+            /* New line */
+
+            System.out.print("      "); 
+            for (int j = 0; j < 15; j++) { 
+                System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                System.out.print(TerminalColors.BLUE_BACKGROUND +" "+ TerminalColors.RESET);
+                System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                if (j != 14) {   
+                    System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                }
+            }
+
             /* New line */
             System.out.println(" "); 
             /* New line */
@@ -187,16 +195,28 @@ public class GameBoard implements Serializable {
                     System.out.print(TerminalColors.BLUE_BACKGROUND +" "+ TerminalColors.RESET);
                     System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
                     System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                    if (j != 14) {   
+                        System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                    }
 
                 } else {
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    if (isShipEnd(j, i)) {
+                        if (j != 14) {   
+                            System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                        }
+                    } else {
+                        System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    }
                 }
             }
             /* Line above the letters */
+
+            
 
             /* New line */
             System.out.println(" "); 
@@ -210,14 +230,14 @@ public class GameBoard implements Serializable {
                     if (i+1 == 10) {
                         System.out.print(" ");
                         System.out.print(" ");
-                        System.out.print(String.valueOf(i+1));
+                        System.out.print(String.valueOf(i+1).toUpperCase());
                         System.out.print(" ");
                         System.out.print(" ");
                     } else {
                         String toPrint = String.valueOf(i+1) + "  "; // This is necessary because every number besides ten takes up one space so it needs to be equaled out
                         System.out.print(" ");
                         System.out.print(" ");
-                        System.out.print(toPrint);
+                        System.out.print(toPrint.toUpperCase());
                         System.out.print(" ");
                     }
                 }
@@ -227,15 +247,25 @@ public class GameBoard implements Serializable {
                 if (board[j][i].equals("WATER")) {
                     System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
                     System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.BLUE_BACKGROUND + "W" + TerminalColors.RESET);
+                    System.out.print(TerminalColors.BLUE_BACKGROUND + " " + TerminalColors.RESET);
                     System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
                     System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                    if (j != 14) {   
+                        System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                    }
                 } else {
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + "S" + TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.BLACK_FONT_WHITE_BACKGROUND + "S" + TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    if (isShipEnd(j, i)) {
+                        if (j != 14) {   
+                            System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                        }
+                    } else {
+                        System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    }
                 }
                 /* Actual letter printing W for water and S for ship */
             }
@@ -260,13 +290,23 @@ public class GameBoard implements Serializable {
                     System.out.print(TerminalColors.BLUE_BACKGROUND +" "+ TerminalColors.RESET);
                     System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
                     System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                    if (j != 14) {   
+                        System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                    }
 
                 } else {
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
-                    System.out.print(TerminalColors.GREEN_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    if (isShipEnd(j, i)) {
+                        if (j != 14) {   
+                            System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                        }
+                    } else {
+                        System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    }
                 }
             }
             /* Line below the letters */
@@ -276,4 +316,7 @@ public class GameBoard implements Serializable {
         System.out.println(" "); 
         /* New line */
     }
+
+   
 }
+
