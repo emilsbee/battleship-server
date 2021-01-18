@@ -1,14 +1,14 @@
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
+
+import protocol.ProtocolMessages;
 
 public class GameClientHandler implements Runnable {
     // The socket and In- and OutputStreams 
-	private BufferedReader in;
-	private BufferedWriter out;
+    private ObjectInputStream in;
+	private ObjectOutputStream out;
     private Socket socket;
     
     // The connected game server
@@ -19,17 +19,18 @@ public class GameClientHandler implements Runnable {
 
     // The game
     private Game game;
+
     /**
-	 * Constructs a new GameClientHandler. Opens the In- and OutputStreams.
-	 * 
+	 * Constructs a new GameClientHandler. Opens the ObjectInputStream and ObjectOutputStream.
+	 * Important to remember that ObjectOutputStream has to be created before the ObjectInputStream.
 	 * @param socket The client socket
 	 * @param server  The connected server
-	 * @param name The name of this GameClientHandler player
+	 * @param game The game instance
 	 */
     public GameClientHandler(Socket socket, GameServer server, Game game) {
         try {
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            out = new ObjectOutputStream(socket.getOutputStream());
+            in = new ObjectInputStream(socket.getInputStream());
             this.socket = socket;
             this.server = server;
             this.game = game;
@@ -47,40 +48,74 @@ public class GameClientHandler implements Runnable {
         String input;
         
 		try {
-            input = in.readLine();
+            input = in.readUTF();
             while (input != null) {
                 handleCommand(input);
-                out.newLine();
-                out.flush();
-                input = in.readLine();
+                input = in.readUTF();
             }
+        } catch (IOException | ClassNotFoundException e) {
+            shutdown();
+        } 
+    }
+    
+    /**
+     * Waits for the input of a gameboard from the client through a new ObjectInputStream which
+     * is closed after receiving the gameboard.
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    public void listenForGameBoard() throws IOException, ClassNotFoundException {
+        ObjectInputStream gameBoardIn = new ObjectInputStream(socket.getInputStream());
+        GameBoard board;
+        try {
+            board = (GameBoard) gameBoardIn.readObject();
+            // board.printBoard(board.getBoard());
+            System.out.println("Board received!");
         } catch (IOException e) {
             shutdown();
-        }
-	}
+        } 
+        // gameBoardIn.close();
+    }
 
-    public void handleCommand(String input) throws IOException {
+
+    /**
+     * Handles client sent input.
+     * @param input the String input to handle.
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    public void handleCommand(String input) throws IOException, ClassNotFoundException {
+        
         if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE) && input.split(";").length >= 2) { // Handshake
             String playerName = input.split(";")[1];
             this.name = playerName;
-            out.write(server.getHello(playerName));
-            out.newLine();
+            sendMessage(server.getHello(playerName));
             game.setPlayer(this);
-		} 
+		} else if (input.equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
+            listenForGameBoard();
+        }
     }
 
+    /**
+     * Sends a String message to the client through writeUTF.
+     * @param message The message to send to the client.
+     */
     public void sendMessage(String message)  {
         if (out != null) {
             try {
-                out.write(message);
-                out.newLine();
+                out.writeUTF(message);
                 out.flush();
             } catch (IOException e) {
                 e.getStackTrace();
+                shutdown();
             }
         } 
     }
 
+    /**
+     * 
+     * @return This threads client's name.
+     */
     public String getName() {
         return this.name;
     }

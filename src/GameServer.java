@@ -4,6 +4,10 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import exceptions.ExitProgram;
+import protocol.ProtocolMessages;
+import protocol.ServerProtocol;
+
 public class GameServer implements Runnable, ServerProtocol {
     
     // Server socket for the game server
@@ -22,7 +26,6 @@ public class GameServer implements Runnable, ServerProtocol {
         clients = new ArrayList<>();
         view = new GameServerTUI();
         game = new Game(view, this);
-        // new Thread(game).start();
     }
     public static void main(String[] args) throws IOException {
         System.out.println(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET);
@@ -53,15 +56,13 @@ public class GameServer implements Runnable, ServerProtocol {
                     } 
                 }
             } catch (ExitProgram ee) {
-                // If setup() throws an ExitProgram exception,
-                // stop the program.
                 openNewSocket = false;
             } catch (IOException ie) {
                 view.showMessage(TerminalColors.RED_BOLD + "A server IO error occurred: " + ie.getMessage()+ TerminalColors.RESET);
                 openNewSocket = false;
             }
         }
- 		
+ 		view.showMessage(TerminalColors.RED_BOLD +"Server turning off."+ TerminalColors.RESET);
 	}
 
     /**
@@ -79,7 +80,6 @@ public class GameServer implements Runnable, ServerProtocol {
                 serverSocket = new ServerSocket(port);
                 view.showMessage(TerminalColors.GREEN + "Server started at port " + port + TerminalColors.RESET);
             } catch (IOException e) {
-                view.showMessage(TerminalColors.RED_BOLD + "ERROR: could not create a socket on 127.0.0.1" + " and port " + port + "." + TerminalColors.RESET);
                 throw new ExitProgram(TerminalColors.RED_BOLD + "Game server stopped due to failed socket creation. Try again by starting server on a different port perhaps."+ TerminalColors.RESET);
             }
         }
@@ -102,7 +102,7 @@ public class GameServer implements Runnable, ServerProtocol {
     public String enemyName(String playerName) {
         return ProtocolMessages.ENEMYNAME + ProtocolMessages.DELIMITER + playerName;
     }
-    
+
 	@Override
 	public String gameSetup() {
 		// TODO Auto-generated method stub

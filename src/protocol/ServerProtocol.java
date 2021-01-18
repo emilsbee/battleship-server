@@ -1,3 +1,5 @@
+package protocol;
+
 public interface ServerProtocol {
 
     /**

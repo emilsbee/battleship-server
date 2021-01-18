@@ -1,3 +1,5 @@
+package protocol;
+
 public class ProtocolMessages {
     /**
 	 * Delimiter used to separate arguments sent over the network.
