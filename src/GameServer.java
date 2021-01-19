@@ -13,10 +13,10 @@ public class GameServer implements Runnable, ServerProtocol {
     // Server socket for the game server
     private ServerSocket serverSocket;
 
-    // List of GameClientHandlers, one for each client
-    private List<GameClientHandler> clients;
 
     private List<Game> games;
+
+    private GameClientHandler clientWaitingForGame;
 
     // The game
     private Game game;
@@ -25,7 +25,6 @@ public class GameServer implements Runnable, ServerProtocol {
     private GameServerTUI view;
 
     public GameServer() throws IOException {
-        clients = new ArrayList<>();
         games = new ArrayList<>();
         view = new GameServerTUI();
         game = new Game(view, this);
@@ -48,15 +47,31 @@ public class GameServer implements Runnable, ServerProtocol {
         while(openNewSocket) {
             try {
                 setup();
+
+                game = new Game(view, this);
                 while (true) {
-                    if (clients.size() < 2) {
-                        view.showMessage(TerminalColors.BLUE + "Listening for player connections..." + TerminalColors.RESET);
-                        Socket socket = serverSocket.accept();
-                        view.showMessage(TerminalColors.GREEN + "New client connected!" + TerminalColors.RESET);
+                    view.showMessage(TerminalColors.BLUE + "Listening for player connections..." + TerminalColors.RESET);
+                    Socket socket = serverSocket.accept();
+                    view.showMessage(TerminalColors.GREEN + "New client connected!" + TerminalColors.RESET);
+
+                    if (clientWaitingForGame == null) { // If nobody is waiting for an opponent
+                        
+                        if (game == null) {
+                            game = new Game(view, this);
+                        } 
+
                         GameClientHandler handler = new GameClientHandler(socket, this, game);
                         new Thread(handler).start();
-                        clients.add(handler);
-                    } 
+                        clientWaitingForGame = handler;
+                    
+                    } else { // If somebody is waiting for an opponent
+
+                        GameClientHandler handler = new GameClientHandler(socket, this, game);
+                        new Thread(handler).start();
+                        games.add(game);
+                        clientWaitingForGame = null;
+                        game = null;
+                    }
                 }
             } catch (ExitProgram ee) {
                 view.showMessage(TerminalColors.RED_BOLD + ee.getMessage()+ TerminalColors.RESET);
@@ -90,13 +105,6 @@ public class GameServer implements Runnable, ServerProtocol {
         }
     }
 
-    /**
-	 * Removes a clientHandler from the client list.
-	 * @requires client != null
-	 */
-	public void removeClient(GameClientHandler client) {
-		this.clients.remove(client);
-	}
  
 	@Override
 	public String getHello(String playerName) {

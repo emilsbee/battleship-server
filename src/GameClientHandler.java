@@ -135,6 +135,5 @@ public class GameClientHandler implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		server.removeClient(this);
 	}
 }

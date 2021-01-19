@@ -1,7 +1,7 @@
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class Game {
+public class Game implements Runnable {
     // Player names
     private GameClientHandler player1;
     private GameClientHandler player2;
@@ -16,10 +16,30 @@ public class Game {
     // The game server
     private GameServer server;
 
+
+    // Indicator for actual start of gane
+    private boolean gameStarted;
+
     public Game(GameServerTUI view, GameServer server) {
         this.view = view;
         this.server = server;
+        gameStarted = false;
     }
+
+    @Override
+	public void run() {
+        view.showMessage("Game started");
+        TimerTask task = new TimerTask(){
+            public void run() {
+                view.showMessage("Game ended!");
+            }
+        };
+
+        Timer timer = new Timer("Timer");
+
+        long delay = 5000L;
+        timer.schedule(task,delay);
+	}
 
 
     // Sets the player to which ever variable is still available.
@@ -39,35 +59,31 @@ public class Game {
         player2.sendMessage(server.enemyName(player1.getName()));
     }
 
-    public void startGame() {
-        TimerTask task = new TimerTask(){
-            public void run() {
-                view.showMessage("Game ended!");
-            }
-        };
-
-        Timer timer = new Timer("Timer");
-
-        long delay = 5000L;
-        timer.schedule(task,delay);
-    }
 
     public void setBoard(GameBoard board, String playerName) {
         if (player1.getName().equals(playerName)) {
             player1Board = board;
-            if (player2Board != null) {
+            if (player2Board != null && !gameStarted) {
                 startGame();
             }
         } else if (player2.getName().equals(playerName)) {
             player2Board = board;
-            if (player1Board != null) {
+            if (player1Board != null && !gameStarted) {
                 startGame();
             }
         }
+    }
+
+    public void startGame() {
+        gameStarted = true;
+        new Thread(this).start();
     }
 
     public void endGame() {
         player1 = null;
         player2 = null;
     }
+
+
+	
 }
