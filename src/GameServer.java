@@ -16,6 +16,8 @@ public class GameServer implements Runnable, ServerProtocol {
     // List of GameClientHandlers, one for each client
     private List<GameClientHandler> clients;
 
+    private List<Game> games;
+
     // The game
     private Game game;
 
@@ -24,6 +26,7 @@ public class GameServer implements Runnable, ServerProtocol {
 
     public GameServer() throws IOException {
         clients = new ArrayList<>();
+        games = new ArrayList<>();
         view = new GameServerTUI();
         game = new Game(view, this);
     }

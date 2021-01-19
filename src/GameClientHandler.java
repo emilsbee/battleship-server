@@ -69,6 +69,7 @@ public class GameClientHandler implements Runnable {
         GameBoard board;
         try {
             board = (GameBoard) gameBoardIn.readObject();
+            game.setBoard(board, name);
         } catch (IOException e) {
             shutdown();
         } 
@@ -92,9 +93,9 @@ public class GameClientHandler implements Runnable {
 		} else if (input.equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
             listenForGameBoard();
         } 
-            if (!input.isEmpty()) {
-                System.out.println(input);  
-            }
+            // if (!input.isEmpty()) {
+            //     System.out.println(input);  
+            // }
     }
 
     /**
