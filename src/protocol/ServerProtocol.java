@@ -10,6 +10,12 @@ public interface ServerProtocol {
    public String getHello(String playerName);
    
    /**
+    * When client tries to connect but in handshake includes the same name as the opponent.
+    * @return The formatted message to send back to client. 
+    */
+    public String nameExists();
+
+   /**
     * Method that sends to player their opponents name. The message construct:
     * ProtocolMessages.ENEMYNAME + ProtocolMessages.DELIMITER + playerName
     * @param playerName the name of the player requesting the enemies name 

@@ -79,9 +79,14 @@ public class GameClientHandler implements Runnable {
         
         if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE) && input.split(";").length >= 2) { // Handshake
             String playerName = input.split(";")[1];
-            this.name = playerName;
-            sendMessage(game.getHello(playerName));
-            game.setPlayer(this);
+
+            if (game.isValidPlayerName(playerName)) {
+                this.name = playerName;
+                sendMessage(game.getHello(playerName));
+                game.setPlayer(this);
+            } else {
+                sendMessage(game.nameExists());
+            }
 		} else if (input.equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
             listenForGameBoard();
         } 

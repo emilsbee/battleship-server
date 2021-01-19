@@ -34,10 +34,13 @@ public class GameServerTUI {
      * @return The integer answer to the question.
      */
     public int getInt(String question) {
-		System.out.print(TerminalColors.PURPLE_BOLD + question + TerminalColors.RESET);
+        int answer;
+		System.out.print(question);
 		while(true){
 			try {
-				return Integer.parseInt(in.next());
+                answer = Integer.parseInt(in.next());
+                in.nextLine();
+                return answer;
 			} catch(NumberFormatException ne) {
 				System.out.print("That's not a valid number.\n"+question);
 			}

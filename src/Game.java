@@ -43,7 +43,7 @@ public class Game implements Runnable, ServerProtocol {
 
 
     // Sets the player to which ever variable is still available.
-    public void setPlayer(GameClientHandler player) {
+    public synchronized void setPlayer(GameClientHandler player) {
         if (player1 == null) {
             player1 = player;
             view.showMessage("Player 1 added. Player name: " + player1.getName());
@@ -60,7 +60,7 @@ public class Game implements Runnable, ServerProtocol {
     }
 
 
-    public void setBoard(GameBoard board, String playerName) {
+    public synchronized void setBoard(GameBoard board, String playerName) {
         if (player1.getName().equals(playerName)) {
             player1Board = board;
             if (player2Board != null && !gameStarted) {
@@ -79,6 +79,13 @@ public class Game implements Runnable, ServerProtocol {
         new Thread(this).start();
     }
 
+    public synchronized boolean isValidPlayerName(String playerName) {
+        return (
+            player1 == null || 
+            !player1.getName().equals(playerName) 
+        );
+    }
+
     public void endGame() {
         player1 = null;
         player2 = null;
@@ -87,6 +94,11 @@ public class Game implements Runnable, ServerProtocol {
 	@Override
 	public synchronized String getHello(String playerName) {
 		return ProtocolMessages.HANDSHAKE;
+    }
+    
+    @Override
+	public synchronized String nameExists() {
+		return ProtocolMessages.NAME_EXISTS;
 	}
 
     @Override
@@ -129,6 +141,8 @@ public class Game implements Runnable, ServerProtocol {
 		// TODO Auto-generated method stub
 		
 	}
+
+	
 
 
 	
