@@ -17,6 +17,9 @@ public class GameServer implements Runnable {
     // The terminal view of this server
     private GameServerTUI view;
 
+    // Basically the id of the game. To distinguish messages from various games.
+    private int gameCount; 
+
     /**
      * Starts the server on a new thread.
      * @param args Command line arguments passed when running this program
@@ -34,6 +37,7 @@ public class GameServer implements Runnable {
      */
     public GameServer() throws IOException {
         view = new GameServerTUI();
+        gameCount = 0;
     }
 
     /**
@@ -49,7 +53,8 @@ public class GameServer implements Runnable {
             try {
                 setup();
 
-                Game game = new Game(view);
+                gameCount++;
+                Game game = new Game(view, gameCount);
                 while (true) {
                     view.showMessage(TerminalColors.BLUE_BOLD + "Listening for player connections..." + TerminalColors.RESET);
                     Socket socket = serverSocket.accept();
@@ -58,7 +63,8 @@ public class GameServer implements Runnable {
                     if (clientWaitingForGame == null) { // If nobody is waiting for an opponent
                         
                         if (game == null) {
-                            game = new Game(view);
+                            gameCount++;
+                            game = new Game(view, gameCount);
                         } 
 
                         GameClientHandler handler = new GameClientHandler(socket, this, game, view);

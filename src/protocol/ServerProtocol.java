@@ -23,12 +23,6 @@ public interface ServerProtocol {
     */
    public String enemyName(String playerName);
 
-   /**
-    * Since the players send their boards to the server, this method receives the board and adds it to the game.
-    * The received message is in the form: ProtocolMessages.CLIENTBOARD + ProtocolMessages.DELIMITER + board[][]
-    * @param board A double String array that represents the board. Contains values from the enum fieldState that make water and ships.
-    */
-   public void clientBoard(String[][] board, String playerName);
    
    /**
     * Sends out to clients who begins the game.
