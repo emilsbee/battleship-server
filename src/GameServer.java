@@ -1,74 +1,74 @@
+// External imports
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
+// Internal imports
 import exceptions.ExitProgram;
-import protocol.ProtocolMessages;
-import protocol.ServerProtocol;
 
-public class GameServer implements Runnable, ServerProtocol {
+public class GameServer implements Runnable {
     
     // Server socket for the game server
     private ServerSocket serverSocket;
 
-
-    private List<Game> games;
-
+    // Re-usable variable used to check whether someone is connected and waiting for an opponent
     private GameClientHandler clientWaitingForGame;
 
-    // The game
-    private Game game;
-
-    // The view of this GameServer
+    // The terminal view of this server
     private GameServerTUI view;
 
-    public GameServer() throws IOException {
-        games = new ArrayList<>();
-        view = new GameServerTUI();
-        game = new Game(view, this);
-    }
+    /**
+     * Starts the server on a new thread.
+     * @param args Command line arguments passed when running this program
+     * @throws IOException
+     */
     public static void main(String[] args) throws IOException {
         System.out.println(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET);
         GameServer server = new GameServer();
         new Thread(server).start();
     }
 
-    /**sendMessage
-     * Calls {@link #setup()} to open up a server socket. Then listens for new client connections and accepts them only until 
-     * two clients have connected. 
-     * 
-     * When {@link #setup()} throws exit program, the server socket is closed 
+    /**
+     * Constructor that only initialises the terminal view of this server
+     * @throws IOException
+     */
+    public GameServer() throws IOException {
+        view = new GameServerTUI();
+    }
+
+    /**
+     * Server's loop for listening for new client connections. To pair up clients for games it uses a simple
+     * approach whereby first client connected waits until someone else connects and then they are paired for a game.
+     * Then next client that connects again waits for an opponent and so forth.
      */
 	@Override
 	public void run() {
         boolean openNewSocket = true; // Indicates whether to keep listening for new client connections.
+
         while(openNewSocket) {
             try {
                 setup();
 
-                game = new Game(view, this);
+                Game game = new Game(view);
                 while (true) {
-                    view.showMessage(TerminalColors.BLUE + "Listening for player connections..." + TerminalColors.RESET);
+                    view.showMessage(TerminalColors.BLUE_BOLD + "Listening for player connections..." + TerminalColors.RESET);
                     Socket socket = serverSocket.accept();
-                    view.showMessage(TerminalColors.GREEN + "New client connected!" + TerminalColors.RESET);
+                    view.showMessage(TerminalColors.GREEN_BOLD + "New client connected!" + TerminalColors.RESET);
 
                     if (clientWaitingForGame == null) { // If nobody is waiting for an opponent
                         
                         if (game == null) {
-                            game = new Game(view, this);
+                            game = new Game(view);
                         } 
 
-                        GameClientHandler handler = new GameClientHandler(socket, this, game);
+                        GameClientHandler handler = new GameClientHandler(socket, this, game, view);
                         new Thread(handler).start();
                         clientWaitingForGame = handler;
                     
                     } else { // If somebody is waiting for an opponent
 
-                        GameClientHandler handler = new GameClientHandler(socket, this, game);
+                        GameClientHandler handler = new GameClientHandler(socket, this, game, view);
                         new Thread(handler).start();
-                        games.add(game);
                         clientWaitingForGame = null;
                         game = null;
                     }
@@ -81,6 +81,7 @@ public class GameServer implements Runnable, ServerProtocol {
                 openNewSocket = false;
             }
         }
+        
  		view.showMessage(TerminalColors.RED_BOLD +"Server turning off."+ TerminalColors.RESET);
 	}
 
@@ -95,58 +96,11 @@ public class GameServer implements Runnable, ServerProtocol {
             int port = view.getInt("Please enter the server port: ");
 
             try {
-                view.showMessage(TerminalColors.BLUE + "Attempting to open a socket at 127.0.0.1 on port " + port + "..." + TerminalColors.RESET);
                 serverSocket = new ServerSocket(port);
-                view.showMessage(TerminalColors.GREEN + "Server started at port " + port + TerminalColors.RESET);
+                view.showMessage(TerminalColors.GREEN_BOLD + "Server started on port " + port + TerminalColors.RESET);
             } catch (IOException e) {
-                view.showMessage(TerminalColors.RED_BOLD + "ERROR: could not create a socket on 127.0.0.1" + " and port " + port + "." + TerminalColors.RESET);
                 throw new ExitProgram(TerminalColors.RED_BOLD + "Game server stopped due to failed socket creation. Try again by starting server on a different port perhaps."+ TerminalColors.RESET);
             }
         }
     }
-
- 
-	@Override
-	public String getHello(String playerName) {
-		return ProtocolMessages.HANDSHAKE;
-	}
-
-    @Override
-    public String enemyName(String playerName) {
-        return ProtocolMessages.ENEMYNAME + ProtocolMessages.DELIMITER + playerName;
-    }
-
-	@Override
-	public String gameSetup() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public boolean move(int x, int y) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public String update(int x, int y, boolean isHit, boolean isSunk, boolean isTurn) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String gameOver(int result) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	@Override
-	public void clientBoard(String[][] board, String playerName) {
-		// TODO Auto-generated method stub
-		
-	}
-	@Override
-	public void exit() {
-		// TODO Auto-generated method stub
-		
-	}
 }

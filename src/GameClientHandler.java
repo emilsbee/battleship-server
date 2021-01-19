@@ -1,40 +1,50 @@
+// External imports
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
+// Internal imports
 import protocol.ProtocolMessages;
 
 public class GameClientHandler implements Runnable {
-    // The socket and In- and OutputStreams 
+    // The socket input and output streams
     private ObjectInputStream in;
-	private ObjectOutputStream out;
+    private ObjectOutputStream out;
+    
+    // The client socket
     private Socket socket;
     
-    // The connected game server
+    // The main server
     GameServer server;
 
     // Player's name
     private String name;
 
-    // The game
+    // The game that this player is participating in
     private Game game;
     
+    // The terminal view of this server
+    private GameServerTUI view;
+
     /**
      * Constructs a new GameClientHandler. Opens the ObjectInputStream and ObjectOutputStream.
      * Important to remember that ObjectOutputStream has to be created before the ObjectInputStream.
      * @param socket The client socket
      * @param server  The connected server
      * @param game The game instance
+     * @param view the terminal view of the server
 	 */
-    public GameClientHandler(Socket socket, GameServer server, Game game) {
+    public GameClientHandler(Socket socket, GameServer server, Game game, GameServerTUI view) {
         try {
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream());
             this.socket = socket;
             this.server = server;
             this.game = game;
+            this.view = view;
         } catch (IOException e) {
+            view.showMessage(name + "'s thread is having an IO problem creating input and output streams.");
             shutdown();
         }
     }
@@ -54,28 +64,10 @@ public class GameClientHandler implements Runnable {
                 input = in.readUTF();
             }
         } catch (IOException | ClassNotFoundException e) {
+            view.showMessage(name + "'s thread is having an IO problem reading UTF input.");
             shutdown();
         } 
     }
-    
-    /**
-     * Waits for the input of a gameboard from the client through a new ObjectInputStream which
-     * is closed after receiving the gameboard.
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    public void listenForGameBoard() throws IOException, ClassNotFoundException {
-        ObjectInputStream gameBoardIn = new ObjectInputStream(socket.getInputStream());
-        GameBoard board;
-        try {
-            board = (GameBoard) gameBoardIn.readObject();
-            game.setBoard(board, name);
-        } catch (IOException e) {
-            shutdown();
-        } 
-        // gameBoardIn.close();
-    }
-
 
     /**
      * Handles client sent input.
@@ -88,7 +80,7 @@ public class GameClientHandler implements Runnable {
         if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE) && input.split(";").length >= 2) { // Handshake
             String playerName = input.split(";")[1];
             this.name = playerName;
-            sendMessage(server.getHello(playerName));
+            sendMessage(game.getHello(playerName));
             game.setPlayer(this);
 		} else if (input.equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
             listenForGameBoard();
@@ -96,6 +88,23 @@ public class GameClientHandler implements Runnable {
             // if (!input.isEmpty()) {
             //     System.out.println(input);  
             // }
+    }
+    
+    /**
+     * Waits for the input of a gameboard from the client through a new ObjectInputStream.
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    public void listenForGameBoard() throws IOException, ClassNotFoundException {
+        ObjectInputStream gameBoardIn = new ObjectInputStream(socket.getInputStream());
+        GameBoard board;
+        try {
+            board = (GameBoard) gameBoardIn.readObject();
+            game.setBoard(board, name);
+        } catch (IOException e) {
+            view.showMessage(name + "'s thread is having an IO problem reading game board input.");
+            shutdown();
+        } 
     }
 
     /**
@@ -115,7 +124,7 @@ public class GameClientHandler implements Runnable {
     }
 
     /**
-     * 
+     * Getter for this player's name
      * @return This threads client's name.
      */
     public String getName() {
@@ -123,17 +132,17 @@ public class GameClientHandler implements Runnable {
     }
 
     /**
-	 * Shut down the connection to this client by closing the socket and 
-	 * the In- and OutputStreams.
+	 * Shuts down the connection to this client by closing the socket and 
+	 * the input, output streams.
 	 */
 	private void shutdown() {
-		System.out.println("> " + name + " Shutting down.");
-		try {
-			in.close();
+        try {
+            in.close();
 			out.close();
 			socket.close();
+            System.out.println(name + " has disconnected.");
 		} catch (IOException e) {
-			e.printStackTrace();
+			view.showMessage(name + "'s thread is having an IO problem disconnecting.");
 		}
 	}
 }

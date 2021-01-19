@@ -1,7 +1,12 @@
+// External imports
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class Game implements Runnable {
+// Internal imports
+import protocol.ProtocolMessages;
+import protocol.ServerProtocol;
+
+public class Game implements Runnable, ServerProtocol {
     // Player names
     private GameClientHandler player1;
     private GameClientHandler player2;
@@ -13,16 +18,11 @@ public class Game implements Runnable {
     // The server TUI
     private GameServerTUI view;
 
-    // The game server
-    private GameServer server;
-
-
     // Indicator for actual start of gane
     private boolean gameStarted;
 
-    public Game(GameServerTUI view, GameServer server) {
+    public Game(GameServerTUI view) {
         this.view = view;
-        this.server = server;
         gameStarted = false;
     }
 
@@ -55,8 +55,8 @@ public class Game implements Runnable {
     }
 
     public void sendEnemyName() {
-        player1.sendMessage(server.enemyName(player2.getName()));
-        player2.sendMessage(server.enemyName(player1.getName()));
+        player1.sendMessage(enemyName(player2.getName()));
+        player2.sendMessage(enemyName(player1.getName()));
     }
 
 
@@ -83,6 +83,52 @@ public class Game implements Runnable {
         player1 = null;
         player2 = null;
     }
+
+	@Override
+	public synchronized String getHello(String playerName) {
+		return ProtocolMessages.HANDSHAKE;
+	}
+
+    @Override
+    public synchronized String enemyName(String playerName) {
+        return ProtocolMessages.ENEMYNAME + ProtocolMessages.DELIMITER + playerName;
+    }
+
+	@Override
+	public synchronized void clientBoard(String[][] board, String playerName) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public synchronized String gameSetup() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public synchronized boolean move(int x, int y) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public synchronized String update(int x, int y, boolean isHit, boolean isSunk, boolean isTurn) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public synchronized String gameOver(int result) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public synchronized void exit() {
+		// TODO Auto-generated method stub
+		
+	}
 
 
 	
