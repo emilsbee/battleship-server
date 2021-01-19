@@ -26,7 +26,7 @@ public class GameServer implements Runnable {
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
-        System.out.println(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET);
+        System.out.println(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server! " + TerminalColors.RESET);
         GameServer server = new GameServer();
         new Thread(server).start();
     }
