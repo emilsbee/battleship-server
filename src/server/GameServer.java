@@ -1,10 +1,16 @@
+package server;
+
 // External imports
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 // Internal imports
+import client.GameClientHandler;
 import exceptions.ExitProgram;
+import game.Game;
+import tui.GameServerTUI;
+import tui.TerminalColors;
 
 public class GameServer implements Runnable {
     

@@ -1,11 +1,18 @@
+package client;
+
 // External imports
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Timer;
+import java.util.TimerTask;
 
 // Internal imports
+import game.Game;
 import protocol.ProtocolMessages;
+import server.GameServer;
+import tui.GameServerTUI;
 
 public class GameClientHandler implements Runnable {
     // The socket input and output streams
@@ -26,6 +33,9 @@ public class GameClientHandler implements Runnable {
     
     // The terminal view of this server
     private GameServerTUI view;
+
+    private TimerTask task;
+
 
     /**
      * Constructs a new GameClientHandler. Opens the ObjectInputStream and ObjectOutputStream.
@@ -89,12 +99,41 @@ public class GameClientHandler implements Runnable {
             }
 		} else if (input.equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
             listenForGameBoard();
-        } 
+        } else if (input.split(";")[0].equals(ProtocolMessages.MOVE)) { // Move
+            int x = Integer.parseInt(input.split(";")[1]);
+            int y = Integer.parseInt(input.split(";")[2]);
+            game.makeMove(x, y, false);
+           synchronized (game) {
+               task.cancel();
+               game.notifyAll();
+           }
+        }
             // if (!input.isEmpty()) {
             //     System.out.println(input);  
             // }
     }
     
+    
+
+    public void makeMove() {
+        view.showMessage("Game " + game.getGameId() + " Move timer started");
+        Timer timer = new Timer("Timer");
+    
+
+        task = new TimerTask() {
+            public void run() {
+                view.showMessage("Game " + game.getGameId() + " Move timer ended");
+                game.makeMove(0, 0, true);
+                synchronized (game) {
+                    game.notifyAll();
+                }
+            }
+        };
+
+        long delay = 30000L; // 30 seconds
+        timer.schedule(task, delay);
+    }
+  
     /**
      * Waits for the input of a gameboard from the client through a new ObjectInputStream.
      * @throws IOException
@@ -102,9 +141,9 @@ public class GameClientHandler implements Runnable {
      */
     public void listenForGameBoard() throws IOException, ClassNotFoundException {
         ObjectInputStream gameBoardIn = new ObjectInputStream(socket.getInputStream());
-        GameBoard board;
+        String[][] board;
         try {
-            board = (GameBoard) gameBoardIn.readObject();
+            board = (String[][]) gameBoardIn.readObject();
             game.setBoard(board, name);
         } catch (IOException e) {
             view.showMessage(name + "'s thread is having an IO problem reading game board input.");

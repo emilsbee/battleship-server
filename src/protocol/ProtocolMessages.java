@@ -18,6 +18,7 @@ public class ProtocolMessages {
 	 * The following chars are both used by the TUI to receive user input, and the
 	 * server and client to distinguish messages.
 	 */
+    public static final String LATE_MOVE = "lm";
     public static final String NAME_EXISTS = "ne";
     public static final String ENEMYNAME = "n";
     public static final String CLIENTBOARD = "b";

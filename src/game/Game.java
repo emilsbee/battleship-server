@@ -1,12 +1,15 @@
+package game;
+
 // External imports
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.Random;
 
 // Internal imports
+import client.GameClientHandler;
 import protocol.ProtocolMessages;
 import protocol.ServerProtocol;
+import tui.GameServerTUI;
 
-public class Game implements Runnable, ServerProtocol {
+public class Game implements ServerProtocol, Runnable {
     // The id of the game
     private int gameId;
 
@@ -15,14 +18,20 @@ public class Game implements Runnable, ServerProtocol {
     private GameClientHandler player2;
 
     // Player boards
-    private GameBoard player1Board;
-    private GameBoard player2Board;
+    private String[][] player1Board;
+    private String[][] player2Board;
 
     // The server TUI
     private GameServerTUI view;
 
     // Indicator for actual start of gane
     private boolean gameStarted;
+
+    // Re-usable random
+    Random random;
+
+    private String currentMove;
+
 
     /**
      * Constructor that initialises this game's id and the terminal view, and sets the game started to false
@@ -33,7 +42,12 @@ public class Game implements Runnable, ServerProtocol {
     public Game(GameServerTUI view, int gameId) {
         this.gameId = gameId; 
         this.view = view;
+        random = new Random();
         gameStarted = false;
+    }
+
+    public int getGameId() {
+        return gameId;
     }
 
     /**
@@ -43,18 +57,64 @@ public class Game implements Runnable, ServerProtocol {
      */
     @Override
 	public void run() {
+        currentMove = decideWhoStart();
+        sendMessageToBothPlayers(gameSetup(currentMove)); // Sends message to both players with information about who starts
+        
+
         view.showMessage("Game " + gameId + ": started");
-        TimerTask task = new TimerTask(){
-            public void run() {
-                view.showMessage("Game " + gameId + ": ended!");
-            }
-        };
+        
+        long t = System.currentTimeMillis(); 
+        long end = t + 300000; // Ends in 5 minutes
 
-        Timer timer = new Timer("Timer");
+        while(System.currentTimeMillis() < end) {
+                                                   
+            view.showMessage("Game " + gameId + " Waiting for turn");
+            determineMove();
 
-        long delay = 5000L;
-        timer.schedule(task,delay);
-	}
+            try {
+                synchronized (this) {
+                    wait();
+                }
+			} catch (InterruptedException e) {}
+        }
+
+        view.showMessage("Game " + gameId + ": ended!");
+    }
+
+    public void determineMove() {
+        if (player1.getName().equals(currentMove)) {
+            player1.makeMove();
+        } else {
+            player2.makeMove();
+        }
+    }
+  
+
+    public void makeMove(int x, int y, boolean isLate) {
+        String previousMove = currentMove;
+
+        if (isLate) {
+            view.showMessage("Game " + gameId + "late move."); 
+        } else {
+
+            view.showMessage("Game " + gameId + "move!"); 
+        }
+
+        if (player1.getName().equals(currentMove)) {
+            currentMove = player2.getName();
+        } else if (player2.getName().equals(currentMove)) {
+            currentMove = player1.getName();
+        }
+
+        update(x, y, true, true, isLate, previousMove, currentMove);
+    }
+
+    
+    
+    public void sendMessageToBothPlayers(String message) {
+        player1.sendMessage(message);
+        player2.sendMessage(message);
+    }
 
 
     /**
@@ -94,7 +154,7 @@ public class Game implements Runnable, ServerProtocol {
      * @param board The board to be set.
      * @param playerName The name of the player for which the board is to be set.
      */
-    public synchronized void setBoard(GameBoard board, String playerName) {
+    public synchronized void setBoard(String[][] board, String playerName) {
         if (player1.getName().equals(playerName)) {
             player1Board = board;
             if (player2Board != null && !gameStarted) {
@@ -131,9 +191,17 @@ public class Game implements Runnable, ServerProtocol {
         );
     }
 
-    public void endGame() {
-        player1 = null;
-        player2 = null;
+    /**
+     * Randomly determines which players goes first.
+     * @return The name of the player that goes first.
+     */
+    public String decideWhoStart() {
+        int whoStarts = random.nextInt(2);
+        if (whoStarts == 0) {
+            return player1.getName();
+        } else {
+            return player2.getName();
+        }
     }
 
 	@Override
@@ -152,9 +220,8 @@ public class Game implements Runnable, ServerProtocol {
     }
 
 	@Override
-	public synchronized String gameSetup() {
-		// TODO Auto-generated method stub
-		return null;
+	public synchronized String gameSetup(String playerName) {
+		return ProtocolMessages.SETUP + ProtocolMessages.DELIMITER + playerName;
 	}
 
 	@Override
@@ -164,9 +231,25 @@ public class Game implements Runnable, ServerProtocol {
 	}
 
 	@Override
-	public synchronized String update(int x, int y, boolean isHit, boolean isSunk, boolean isTurn) {
-		// TODO Auto-generated method stub
-		return null;
+	public synchronized void update(int x, int y, boolean isHit, boolean isSunk, boolean isLate, String lastPlayerName, String nextPlayerName) {
+		sendMessageToBothPlayers(
+            ProtocolMessages.UPDATE + 
+            ProtocolMessages.DELIMITER + 
+            String.valueOf(x) +
+            ProtocolMessages.DELIMITER + 
+            String.valueOf(y) + 
+            ProtocolMessages.DELIMITER +
+            String.valueOf(isHit) + 
+            ProtocolMessages.DELIMITER +
+            String.valueOf(isSunk) + 
+            ProtocolMessages.DELIMITER +
+            String.valueOf(isLate) +
+            ProtocolMessages.DELIMITER +
+            lastPlayerName +
+            ProtocolMessages.DELIMITER +
+            nextPlayerName
+        );
+
 	}
 
 	@Override
@@ -179,6 +262,20 @@ public class Game implements Runnable, ServerProtocol {
 	public synchronized void exit() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public void lateMove() {
+        if (player1.getName().equals(currentMove)) {
+            player1.sendMessage(ProtocolMessages.UPDATE+ProtocolMessages.DELIMITER+player2.getName());
+            player2.sendMessage(ProtocolMessages.LATE_MOVE+ProtocolMessages.DELIMITER+player2.getName());
+            this.currentMove = player2.getName();
+        } else {
+            player1.sendMessage(ProtocolMessages.LATE_MOVE+ProtocolMessages.DELIMITER+player1.getName());
+            player2.sendMessage(ProtocolMessages.LATE_MOVE+ProtocolMessages.DELIMITER+player1.getName());
+            this.currentMove = player1.getName();
+        }
+
 	}
 
 

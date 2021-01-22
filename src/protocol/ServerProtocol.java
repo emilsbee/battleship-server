@@ -29,7 +29,7 @@ public interface ServerProtocol {
     * The message construct: ProtocolMessages.SETUP + ProtocolMessages.DELIMITER + playerName
     * @return the name of player that goes first.
     */
-   public String gameSetup();
+   public String gameSetup(String playerName);
 
    /**
     * A move that the client makes.
@@ -54,7 +54,9 @@ public interface ServerProtocol {
     * @param isTurn indicates whether the client has the move now
     * @return the update to both clients about the previous move.
     */
-   public String update(int x, int y, boolean isHit, boolean isSunk, boolean isTurn);
+   public void update(int x, int y, boolean isHit, boolean isSunk, boolean isLate, String lastPlayerName, String nextPlayerName);
+
+   public void lateMove();
 
    /**
     * Method that informs clients when game ends. This could happen if 5 minutes pass, someone sinks all of opponent's ships

@@ -1,3 +1,5 @@
+package tui;
+
 // External imports
 import java.util.Scanner;
 
