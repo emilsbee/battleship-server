@@ -5,11 +5,10 @@ import java.util.Random;
 
 // Internal imports
 import client.GameClientHandler;
-import protocol.ProtocolMessages;
-import protocol.ServerProtocol;
+import gameboard.GameBoard;
 import tui.GameServerTUI;
 
-public class Game implements ServerProtocol, Runnable {
+public class Game implements Runnable {
     // The id of the game
     private int gameId;
 
@@ -18,8 +17,12 @@ public class Game implements ServerProtocol, Runnable {
     private GameClientHandler player2;
 
     // Player boards
-    private String[][] player1Board;
-    private String[][] player2Board;
+    private GameBoard player1Board;
+    private GameBoard player2Board;
+
+    // Player points
+    private int player1Points;
+    private int player2Points;
 
     // The server TUI
     private GameServerTUI view;
@@ -44,21 +47,22 @@ public class Game implements ServerProtocol, Runnable {
         this.view = view;
         random = new Random();
         gameStarted = false;
-    }
-
-    public int getGameId() {
-        return gameId;
+        player1Points = 0;
+        player2Points = 0;
     }
 
     /**
      * The main game loop. This is called when this game is put in a thread and the start() 
      * method is called. Although this isn't exactly a loop, a timer is set for 5 minutes after which the
-     * game automatically ends and whoever has most points wins, if equal then tie.
+     * game automatically ends and whoever has most points wins, if equal then tie. When {@link #determineMove()}
+     * method is called, the thread goes to sleep and waits until one of the GameClientHandlers wakes it up which indicates
+     * that either a move was made by the client or it was a late move. 
      */
     @Override
 	public void run() {
         currentMove = decideWhoStart();
-        sendMessageToBothPlayers(gameSetup(currentMove)); // Sends message to both players with information about who starts
+        player1.gameSetup(currentMove);
+        player2.gameSetup(currentMove);
         
 
         view.showMessage("Game " + gameId + ": started");
@@ -68,7 +72,6 @@ public class Game implements ServerProtocol, Runnable {
 
         while(System.currentTimeMillis() < end) {
                                                    
-            view.showMessage("Game " + gameId + " Waiting for turn");
             determineMove();
 
             try {
@@ -77,10 +80,64 @@ public class Game implements ServerProtocol, Runnable {
                 }
 			} catch (InterruptedException e) {}
         }
-
+        endGame(true, null, null);
         view.showMessage("Game " + gameId + ": ended!");
     }
 
+    /**
+     * Method to start the game by creating a separate thread for it. This is only called
+     * after both players have submitted their boards.
+     */
+    public void startGame() {
+        gameStarted = true;
+        new Thread(this).start();
+    }
+
+    /**
+     * Determines and informs who won and with what type of win: forfeitextd 
+     * @param timeFinished Indicates whether game is over because 5 minutes are up.
+     * @param quitPlayerName Indicates whether the game is over because one of the players quit.
+     * @param winnerName Indicates who won in the case that all ships are destroyed in the game for one of the players.
+     */
+    public void endGame(boolean timeFinished, String quitPlayerName, String winnerName) {
+
+        if (quitPlayerName != null) {
+
+            if (player1.getName().equals(quitPlayerName)) {
+                player2.gameOver(player2.getName(), false);
+            } else {
+                player1.gameOver(player1.getName(), false);
+            }
+
+        } else if (timeFinished) { // Game ended because the 5 minute timer ran out
+
+            if (player1Points > player2Points) { // Player 1 wins
+                player1.gameOver(player1.getName(), true);
+                player2.gameOver(player1.getName(), true);                
+            } else if (player1Points < player2Points) { // Player 2 wins
+                player1.gameOver(player2.getName(), true);
+                player2.gameOver(player2.getName(), true); 
+            } else { // Tie
+                player1.gameOver("", true);
+                player2.gameOver("", true); 
+            }
+
+        } else { // Game finished because all ships were destroyed
+            if (player1.getName().equals(winnerName)) { // If player 1 wins
+                player1.gameOver(player1.getName(), true);
+                player2.gameOver(player1.getName(), true);
+            } else { // If player 2 wins
+                player1.gameOver(player2.getName(), true);
+                player2.gameOver(player2.getName(), true);
+            }
+        }
+
+    }
+
+    /**
+     * Determines which player is supposed to make a move and then asks the respective 
+     * player's GameClientHandler thread for the move.
+     */
     public void determineMove() {
         if (player1.getName().equals(currentMove)) {
             player1.makeMove();
@@ -89,33 +146,74 @@ public class Game implements ServerProtocol, Runnable {
         }
     }
   
-
+    /**
+     * Method that is called by GameClientHandler threads when their respective client has made a move
+     * or didn't make a move (late move).
+     * @param x X coordinate of the move. 
+     * @param y Y coordinate of the move.
+     * @param isLate Indicates whether the move was actually made by the client or they missed their move.
+     */
     public void makeMove(int x, int y, boolean isLate) {
         String previousMove = currentMove;
+        boolean[] result;
+        if (player1.getName().equals(currentMove)) { // If player 1 made the move
+            result = player2Board.makeMove(x, y);
+            System.out.println(result[0] + " " + result[1] + " " + result[2]);
+            
+            if (result[2]) { // If player 1's move destroyed all ships
+                player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                endGame(false, null, player1.getName());
+                Thread.currentThread().interrupt();
+            } else { // If player 1's move didn't destroy all ships
 
-        if (isLate) {
-            view.showMessage("Game " + gameId + "late move."); 
-        } else {
+                // Adds the points
+                if (result[0]) {
+                    player1Points++;
+                } else {
+                    currentMove = player2.getName();
+                } 
 
-            view.showMessage("Game " + gameId + "move!"); 
+                if (result[1]) {
+                    player1Points++;
+                }
+
+                player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                
+            }
+
+        } else { // If player 2 made the move
+            result = player1Board.makeMove(x, y);
+            System.out.println(result[0] + " " + result[1] + " " + result[2]);
+
+            if (result[2]) { // If player 2's move destroyed all ships
+                player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);  
+                player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                endGame(false, null, player2.getName());
+                Thread.currentThread().interrupt();
+            } else { // If player 2's move didn't destroy all ships
+
+                // Adds the points
+                if (result[0]) {
+                    player2Points++;
+                } else {
+                    currentMove = player1.getName();
+                } 
+
+
+                if (result[1]) {
+                    player2Points++;
+                }
+
+                player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+            }
+
         }
 
-        if (player1.getName().equals(currentMove)) {
-            currentMove = player2.getName();
-        } else if (player2.getName().equals(currentMove)) {
-            currentMove = player1.getName();
-        }
-
-        update(x, y, true, true, isLate, previousMove, currentMove);
+        
     }
-
-    
-    
-    public void sendMessageToBothPlayers(String message) {
-        player1.sendMessage(message);
-        player2.sendMessage(message);
-    }
-
 
     /**
      * After a succesful handshake with the client whereby a uniqe name is gotten
@@ -136,12 +234,12 @@ public class Game implements ServerProtocol, Runnable {
 
     /**
      * After both players have connected and their unique names are stored in this class
-     * this method is called and it send the players their opponent's name.
+     * this method is called and it sends the players their opponent's name.
      * The message is sent through the respective player's GameClientHandler {@link #sendMessage()} method.
      */
     public void sendEnemyName() {
-        player1.sendMessage(enemyName(player2.getName()));
-        player2.sendMessage(enemyName(player1.getName()));
+        player1.enemyName(player2.getName());
+        player2.enemyName(player1.getName());
     }
 
 
@@ -154,27 +252,18 @@ public class Game implements ServerProtocol, Runnable {
      * @param board The board to be set.
      * @param playerName The name of the player for which the board is to be set.
      */
-    public synchronized void setBoard(String[][] board, String playerName) {
+    public synchronized void setBoard(String encodedBoard, String playerName) {
         if (player1.getName().equals(playerName)) {
-            player1Board = board;
+            player1Board = new GameBoard(encodedBoard);
             if (player2Board != null && !gameStarted) {
                 startGame();
             }
         } else if (player2.getName().equals(playerName)) {
-            player2Board = board;
+            player2Board = new GameBoard(encodedBoard);
             if (player1Board != null && !gameStarted) {
                 startGame();
             }
         }
-    }
-
-    /**
-     * Method to start the game by creating a separate thread for it. This is only called
-     * after both players have submitted their boards.
-     */
-    public void startGame() {
-        gameStarted = true;
-        new Thread(this).start();
     }
 
     /**
@@ -204,84 +293,11 @@ public class Game implements ServerProtocol, Runnable {
         }
     }
 
-	@Override
-	public synchronized String getHello(String playerName) {
-		return ProtocolMessages.HANDSHAKE;
+    /**
+     * To get the current game's id that is assigned to it by the server.
+     * @return The id of the game.
+     */
+    public int getGameId() {
+        return gameId;
     }
-    
-    @Override
-	public synchronized String nameExists() {
-		return ProtocolMessages.NAME_EXISTS;
-	}
-
-    @Override
-    public synchronized String enemyName(String playerName) {
-        return ProtocolMessages.ENEMYNAME + ProtocolMessages.DELIMITER + playerName;
-    }
-
-	@Override
-	public synchronized String gameSetup(String playerName) {
-		return ProtocolMessages.SETUP + ProtocolMessages.DELIMITER + playerName;
-	}
-
-	@Override
-	public synchronized boolean move(int x, int y) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public synchronized void update(int x, int y, boolean isHit, boolean isSunk, boolean isLate, String lastPlayerName, String nextPlayerName) {
-		sendMessageToBothPlayers(
-            ProtocolMessages.UPDATE + 
-            ProtocolMessages.DELIMITER + 
-            String.valueOf(x) +
-            ProtocolMessages.DELIMITER + 
-            String.valueOf(y) + 
-            ProtocolMessages.DELIMITER +
-            String.valueOf(isHit) + 
-            ProtocolMessages.DELIMITER +
-            String.valueOf(isSunk) + 
-            ProtocolMessages.DELIMITER +
-            String.valueOf(isLate) +
-            ProtocolMessages.DELIMITER +
-            lastPlayerName +
-            ProtocolMessages.DELIMITER +
-            nextPlayerName
-        );
-
-	}
-
-	@Override
-	public synchronized String gameOver(int result) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public synchronized void exit() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void lateMove() {
-        if (player1.getName().equals(currentMove)) {
-            player1.sendMessage(ProtocolMessages.UPDATE+ProtocolMessages.DELIMITER+player2.getName());
-            player2.sendMessage(ProtocolMessages.LATE_MOVE+ProtocolMessages.DELIMITER+player2.getName());
-            this.currentMove = player2.getName();
-        } else {
-            player1.sendMessage(ProtocolMessages.LATE_MOVE+ProtocolMessages.DELIMITER+player1.getName());
-            player2.sendMessage(ProtocolMessages.LATE_MOVE+ProtocolMessages.DELIMITER+player1.getName());
-            this.currentMove = player1.getName();
-        }
-
-	}
-
-
-
-	
-
-
-	
 }

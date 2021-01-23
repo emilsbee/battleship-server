@@ -1,9 +1,12 @@
 package client;
 
 // External imports
+import java.io.BufferedWriter;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.ProtocolException;
 import java.net.Socket;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -11,14 +14,15 @@ import java.util.TimerTask;
 // Internal imports
 import game.Game;
 import protocol.ProtocolMessages;
+import protocol.ServerProtocol;
 import server.GameServer;
 import tui.GameServerTUI;
 
-public class GameClientHandler implements Runnable {
-    // The socket input and output streams
-    private ObjectInputStream in;
-    private ObjectOutputStream out;
-    
+public class GameClientHandler implements Runnable, ServerProtocol {
+    // The socket input and output streams    
+    private BufferedReader in;
+    private BufferedWriter out;
+
     // The client socket
     private Socket socket;
     
@@ -47,8 +51,9 @@ public class GameClientHandler implements Runnable {
 	 */
     public GameClientHandler(Socket socket, GameServer server, Game game, GameServerTUI view) {
         try {
-            out = new ObjectOutputStream(socket.getOutputStream());
-            in = new ObjectInputStream(socket.getInputStream());
+            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
             this.socket = socket;
             this.server = server;
             this.game = game;
@@ -68,12 +73,12 @@ public class GameClientHandler implements Runnable {
         String input;
         
 		try {
-            input = in.readUTF();
+            input = in.readLine();
             while (input != null) {
                 handleCommand(input);
-                input = in.readUTF();
+                input = in.readLine();
             }
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
             view.showMessage(name + "'s thread is having an IO problem reading UTF input.");
             shutdown();
         } 
@@ -85,44 +90,52 @@ public class GameClientHandler implements Runnable {
      * @throws IOException
      * @throws ClassNotFoundException
      */
-    public void handleCommand(String input) throws IOException, ClassNotFoundException {
+    public void handleCommand(String input) throws ProtocolException {
         
-        if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE) && input.split(";").length >= 2) { // Handshake
-            String playerName = input.split(";")[1];
-
-            if (game.isValidPlayerName(playerName)) {
-                this.name = playerName;
-                sendMessage(game.getHello(playerName));
-                game.setPlayer(this);
-            } else {
-                sendMessage(game.nameExists());
+        if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE)) { // Handshake
+            
+            try {
+                String playerName = input.split(";")[1];
+                handleHello(playerName);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                throw new ProtocolException("Client didn't provide name in the handshake.");
             }
-		} else if (input.equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
-            listenForGameBoard();
+
+		} else if (input.split(";")[0].equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
+            
+            clientBoard(input);
+
         } else if (input.split(";")[0].equals(ProtocolMessages.MOVE)) { // Move
-            int x = Integer.parseInt(input.split(";")[1]);
-            int y = Integer.parseInt(input.split(";")[2]);
-            game.makeMove(x, y, false);
-           synchronized (game) {
-               task.cancel();
-               game.notifyAll();
-           }
+            try {
+                int x = Integer.parseInt(input.split(";")[1]);
+                int y = Integer.parseInt(input.split(";")[2]);
+                view.showMessage("X: "+ x + "Y: "+ y);
+                move(x, y);
+            } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
+                throw new ProtocolException("Client didn't provide correct x and y values.");
+            }
+
+        } else if (input.equals(ProtocolMessages.EXIT)) {
+            exit();
         }
-            // if (!input.isEmpty()) {
-            //     System.out.println(input);  
-            // }
+        // if (!input.isEmpty()) {
+        //     System.out.println(input);  
+        // }
     }
     
-    
 
+    
+    /**
+     * This method is always called by the game. It creates a 30 second timer and if
+     * the respective client doesn't send their move then this timer wakes up the game
+     * thread and informs it that their client didn't make a move.
+     */
     public void makeMove() {
-        view.showMessage("Game " + game.getGameId() + " Move timer started");
         Timer timer = new Timer("Timer");
     
 
         task = new TimerTask() {
             public void run() {
-                view.showMessage("Game " + game.getGameId() + " Move timer ended");
                 game.makeMove(0, 0, true);
                 synchronized (game) {
                     game.notifyAll();
@@ -133,23 +146,6 @@ public class GameClientHandler implements Runnable {
         long delay = 30000L; // 30 seconds
         timer.schedule(task, delay);
     }
-  
-    /**
-     * Waits for the input of a gameboard from the client through a new ObjectInputStream.
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    public void listenForGameBoard() throws IOException, ClassNotFoundException {
-        ObjectInputStream gameBoardIn = new ObjectInputStream(socket.getInputStream());
-        String[][] board;
-        try {
-            board = (String[][]) gameBoardIn.readObject();
-            game.setBoard(board, name);
-        } catch (IOException e) {
-            view.showMessage(name + "'s thread is having an IO problem reading game board input.");
-            shutdown();
-        } 
-    }
 
     /**
      * Sends a String message to the client through writeUTF.
@@ -158,7 +154,8 @@ public class GameClientHandler implements Runnable {
     public void sendMessage(String message)  {
         if (out != null) {
             try {
-                out.writeUTF(message);
+                out.write(message);
+                out.newLine();
                 out.flush();
             } catch (IOException e) {
                 e.getStackTrace();
@@ -189,4 +186,78 @@ public class GameClientHandler implements Runnable {
 			view.showMessage(name + "'s thread is having an IO problem disconnecting.");
 		}
 	}
+
+	@Override
+	public void handleHello(String playerName) {
+		if (game.isValidPlayerName(playerName)) {
+            this.name = playerName;
+            sendMessage(ProtocolMessages.HANDSHAKE);
+            game.setPlayer(this);
+        } else {
+            nameExists();
+        }
+	}
+
+	@Override
+	public void nameExists() {
+        sendMessage(ProtocolMessages.NAME_EXISTS);
+    }
+
+    @Override
+	public void enemyName(String playerName) {
+		sendMessage(ProtocolMessages.ENEMYNAME+ProtocolMessages.DELIMITER+playerName);
+	}
+
+    @Override
+	public void clientBoard(String encodedBoard) {
+        game.setBoard(encodedBoard, name);
+    }
+    
+    @Override
+	public void gameSetup(String playerName) {
+		sendMessage(ProtocolMessages.SETUP+ProtocolMessages.DELIMITER+playerName);
+	}
+
+    @Override
+    public void move(int x, int y) {
+        game.makeMove(x, y, false);
+        synchronized (game) { 
+            task.cancel();
+            game.notifyAll();
+        }
+    }
+
+	@Override
+	public void update(int x, int y, boolean isHit, boolean isSunk, boolean isLate, String lastPlayerName, String nextPlayerName) {
+        sendMessage(
+            ProtocolMessages.UPDATE + 
+            ProtocolMessages.DELIMITER + 
+            String.valueOf(x) +
+            ProtocolMessages.DELIMITER + 
+            String.valueOf(y) + 
+            ProtocolMessages.DELIMITER +
+            String.valueOf(isHit) + 
+            ProtocolMessages.DELIMITER +
+            String.valueOf(isSunk) + 
+            ProtocolMessages.DELIMITER +
+            String.valueOf(isLate) +
+            ProtocolMessages.DELIMITER +
+            lastPlayerName +
+            ProtocolMessages.DELIMITER +
+            nextPlayerName
+        );
+		
+	}
+
+	@Override
+	public void gameOver(String playerName, boolean winType) {
+		sendMessage(ProtocolMessages.GAMEOVER+ProtocolMessages.DELIMITER+playerName+ProtocolMessages.DELIMITER+winType);
+	}
+
+	@Override
+	public void exit() {
+		shutdown();
+	}
+
+	
 }
