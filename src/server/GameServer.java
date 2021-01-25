@@ -23,26 +23,47 @@ public class GameServer implements Runnable {
     // The terminal view of this server
     private GameServerTUI view;
 
-    // Basically the id of the game. To distinguish messages from various games.
+    // The id of the last game. 
     private int gameCount; 
+
+    // The port number on which server is hosted.
+    private int port;
 
     /**
      * Starts the server on a new thread.
-     * @param args Command line arguments passed when running this program
-     * @throws IOException
+     * @param args May include the server port,
      */
-    public static void main(String[] args) throws IOException {
-        System.out.println(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server! " + TerminalColors.RESET);
-        GameServer server = new GameServer();
+    public static void main(String[] args) {
+        GameServer server = new GameServer(args);
         new Thread(server).start();
     }
 
     /**
-     * Constructor that only initialises the terminal view of this server
-     * @throws IOException
+     * Checks whether a server port was provided, if it was and it's a valid number, sets that as the port.
+     * If however the port provided is an invalid number it sets it to the default 8888 port.
+     * If no port is provided the sets the port to 0 which will indicate the {@link #setup()} that it needs
+     * to prompt the user for a port. Also initialises the gameCount (which is basically id of games) to 0
+     * and starts a new TUI.
+     * @param args May include the server port.
      */
-    public GameServer() throws IOException {
+    public GameServer(String[] args) {
+        if (args.length >= 1) { 
+            
+            try {
+                port = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                port = 8888;
+            }
+
+        } else {
+        
+            port = 0;
+        
+        }
+        
         view = new GameServerTUI();
+        view.showMessage(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server! " + TerminalColors.RESET);
+        
         gameCount = 0;
     }
 
@@ -57,55 +78,67 @@ public class GameServer implements Runnable {
 
         while(openNewSocket) {
             try {
-                setup();
+                setup(); // Establishes a server socket
 
-                gameCount++;
-                Game game = new Game(view, gameCount);
+                Game game = new Game(view, gameCount); // Initialises the first game
+
                 while (true) {
+
                     view.showMessage(TerminalColors.BLUE_BOLD + "Listening for player connections..." + TerminalColors.RESET);
-                    Socket socket = serverSocket.accept();
+                    Socket socket = serverSocket.accept(); // Listens for new clients
                     view.showMessage(TerminalColors.GREEN_BOLD + "New client connected!" + TerminalColors.RESET);
 
                     if (clientWaitingForGame == null) { // If nobody is waiting for an opponent
-                        
-                        if (game == null) {
-                            gameCount++;
-                            game = new Game(view, gameCount);
-                        } 
+                             
+                        gameCount++; // Increments the gameCount so next game has unique id
+                        game = new Game(view, gameCount);
 
-                        GameClientHandler handler = new GameClientHandler(socket, this, game, view);
+                        // Creates and starts a new client handler
+                        GameClientHandler handler = new GameClientHandler(socket, game, view);
                         new Thread(handler).start();
+
+                        // Indicates that someone is waiting for a game
                         clientWaitingForGame = handler;
                     
                     } else { // If somebody is waiting for an opponent
 
-                        GameClientHandler handler = new GameClientHandler(socket, this, game, view);
+                        // Creates amd starts a new client handler
+                        GameClientHandler handler = new GameClientHandler(socket, game, view);
                         new Thread(handler).start();
+
+                        // Indicates that nobody is waiting for a game
                         clientWaitingForGame = null;
-                        game = null;
                     }
+
                 }
+
             } catch (ExitProgram ee) {
+
                 view.showMessage(TerminalColors.RED_BOLD + ee.getMessage()+ TerminalColors.RESET);
                 openNewSocket = false;
+            
             } catch (IOException ie) {
+            
                 view.showMessage(TerminalColors.RED_BOLD + "A server IO error occurred: " + ie.getMessage()+ TerminalColors.RESET);
                 openNewSocket = false;
+            
             }
         }
         
- 		view.showMessage(TerminalColors.RED_BOLD +"Server turning off."+ TerminalColors.RESET);
 	}
 
     /**
-     * Sets up a server socket on a specific port that is given by the user. 
+     * Sets up a server socket on a specific port that is either given by the user or is prompted. 
      * @throws ExitProgram if socket can't be created on the specific port.
      */
     public void setup() throws ExitProgram {
         serverSocket = null;
 
         while (serverSocket == null) {
-            int port = view.getInt("Please enter the server port: ");
+            
+            if ( port == 0) {
+                port = view.getInt("Please enter the server port: ");
+            }
 
             try {
                 serverSocket = new ServerSocket(port);

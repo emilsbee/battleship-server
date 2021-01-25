@@ -6,16 +6,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.ProtocolException;
 import java.net.Socket;
 import java.util.Timer;
 import java.util.TimerTask;
 
 // Internal imports
+import exceptions.ProtocolException;
 import game.Game;
 import protocol.ProtocolMessages;
 import protocol.ServerProtocol;
-import server.GameServer;
 import tui.GameServerTUI;
 
 public class GameClientHandler implements Runnable, ServerProtocol {
@@ -26,9 +25,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
     // The client socket
     private Socket socket;
     
-    // The main server
-    GameServer server;
-
     // Player's name
     private String name;
 
@@ -38,34 +34,37 @@ public class GameClientHandler implements Runnable, ServerProtocol {
     // The terminal view of this server
     private GameServerTUI view;
 
+    // Re-usable task variable that is used for player move timer
     private TimerTask task;
 
+    // Re-usable timer variable for scheduling the player move timer task
+    private Timer timer;
 
     /**
-     * Constructs a new GameClientHandler. Opens the ObjectInputStream and ObjectOutputStream.
-     * Important to remember that ObjectOutputStream has to be created before the ObjectInputStream.
-     * @param socket The client socket
-     * @param server  The connected server
-     * @param game The game instance
-     * @param view the terminal view of the server
+     * Constructs a new GameClientHandler. Opens the BufferedWriter and BufferedReader.
+     * @param socket The client socket.
+     * @param game The game instance.
+     * @param view the terminal view of the server for displaying messages and prompting questions.
 	 */
-    public GameClientHandler(Socket socket, GameServer server, Game game, GameServerTUI view) {
+    public GameClientHandler(Socket socket, Game game, GameServerTUI view) {
         try {
+
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
             this.socket = socket;
-            this.server = server;
             this.game = game;
             this.view = view;
+            
         } catch (IOException e) {
-            view.showMessage(name + "'s thread is having an IO problem creating input and output streams.");
+
+            view.showMessage("Game "+ game.getGameId() + ", player: " + name + " is having an IO problem creating input and output streams.");
             shutdown();
+        
         }
     }
 
     /**
-	 * Continuously listens to client input and forwards the input to the
+	 * Thread that continuously listens to client input and forwards the input to the
 	 * {@link #handleCommand(String)} method.
 	 */
 	@Override
@@ -74,25 +73,34 @@ public class GameClientHandler implements Runnable, ServerProtocol {
         
 		try {
             input = in.readLine();
+            
             while (input != null) {
+            
                 handleCommand(input);
+            
+                if (in == null) {
+                    break;
+                }
+            
                 input = in.readLine();
             }
         } catch (IOException e) {
-            view.showMessage(name + "'s thread is having an IO problem reading UTF input.");
+            view.showMessage("Game "+ game.getGameId() + ", player: " + name + " is having an IO problem reading input.");
             shutdown();
-        } 
+        } catch (ProtocolException pe) {
+            view.showMessage("Game "+ game.getGameId() + ", player: " + name + pe.getMessage());
+            shutdown();
+        }
     }
 
     /**
-     * Handles client sent input.
+     * Handles client sent input and calls the respective methods to handle the task related to the message.
      * @param input the String input to handle.
-     * @throws IOException
-     * @throws ClassNotFoundException
+     * @throws ProtocolException when the input provided by client doesnt abide the protocol.
      */
     public void handleCommand(String input) throws ProtocolException {
         
-        if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE)) { // Handshake
+        if (input.split(";")[0].equals(ProtocolMessages.HANDSHAKE)) { // Client sends handshake
             
             try {
                 String playerName = input.split(";")[1];
@@ -101,45 +109,44 @@ public class GameClientHandler implements Runnable, ServerProtocol {
                 throw new ProtocolException("Client didn't provide name in the handshake.");
             }
 
-		} else if (input.split(";")[0].equals(ProtocolMessages.CLIENTBOARD)) { // Clientboard 
+		} else if (input.split(";")[0].equals(ProtocolMessages.CLIENTBOARD)) { // Client sends their game board 
             
             clientBoard(input);
 
-        } else if (input.split(";")[0].equals(ProtocolMessages.MOVE)) { // Move
-            try {
-                int x = Integer.parseInt(input.split(";")[1]);
-                int y = Integer.parseInt(input.split(";")[2]);
-                view.showMessage("X: "+ x + "Y: "+ y);
-                move(x, y);
-            } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
-                throw new ProtocolException("Client didn't provide correct x and y values.");
+        } else if (input.split(";")[0].equals(ProtocolMessages.MOVE)) { // Client makes a move
+
+            if (game.getCurrentMove().equals(name)) { // Makes sure that a client can't make a move when it's not their move
+
+                try {
+                    int x = Integer.parseInt(input.split(";")[1]);
+                    int y = Integer.parseInt(input.split(";")[2]);
+                    move(x, y);
+                } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
+                    throw new ProtocolException("Client didn't provide correct x and y values.");
+                }
+            
             }
 
-        } else if (input.equals(ProtocolMessages.EXIT)) {
+        } else if (input.equals(ProtocolMessages.EXIT)) { // Client sends message that they are exiting the game
+
             exit();
+        
         }
-        // if (!input.isEmpty()) {
-        //     System.out.println(input);  
-        // }
     }
     
 
     
     /**
-     * This method is always called by the game. It creates a 30 second timer and if
-     * the respective client doesn't send their move then this timer wakes up the game
-     * thread and informs it that their client didn't make a move.
+     * This method is called by the game when it's this clients move. It creates a 30 second timer and if
+     * the respective client doesn't send their move in time, then this timer makes the 
+     * move for them. The move is marked as late so even though it includes valid
+     * coordinates, they are not actually taken into account by the game.
      */
-    public void makeMove() {
-        Timer timer = new Timer("Timer");
-    
-
+    public void makeMove() {    
+        timer = new Timer("Timer");
         task = new TimerTask() {
             public void run() {
                 game.makeMove(0, 0, true);
-                synchronized (game) {
-                    game.notifyAll();
-                }
             }
         };
 
@@ -147,8 +154,9 @@ public class GameClientHandler implements Runnable, ServerProtocol {
         timer.schedule(task, delay);
     }
 
+
     /**
-     * Sends a String message to the client through writeUTF.
+     * Sends a String message to the client.
      * @param message The message to send to the client.
      */
     public void sendMessage(String message)  {
@@ -158,11 +166,11 @@ public class GameClientHandler implements Runnable, ServerProtocol {
                 out.newLine();
                 out.flush();
             } catch (IOException e) {
-                e.getStackTrace();
                 shutdown();
             }
         } 
     }
+
 
     /**
      * Getter for this player's name
@@ -172,29 +180,43 @@ public class GameClientHandler implements Runnable, ServerProtocol {
         return this.name;
     }
 
+
     /**
-	 * Shuts down the connection to this client by closing the socket and 
+	 * Firstly informs the game (if it hasn't already ended) that the client is quitting.
+     * Then shuts down the connection to this client by closing the socket and 
 	 * the input, output streams.
 	 */
 	private void shutdown() {
-        try {
-            in.close();
-			out.close();
-			socket.close();
-            System.out.println(name + " has disconnected.");
-		} catch (IOException e) {
-			view.showMessage(name + "'s thread is having an IO problem disconnecting.");
-		}
+        if (in != null && out != null && socket != null) {
+            try {
+                if (!game.getGameEnded()) {
+                    game.endGame(false, name, null);
+                }
+                in.close();
+                out.close();
+                socket.close();
+                in = null;
+                out = null;
+                socket = null;
+                System.out.println(name + " has disconnected.");
+            } catch (IOException e) {
+                view.showMessage(name + "'s thread is having an IO problem disconnecting.");
+            }
+        }
 	}
 
 	@Override
 	public void handleHello(String playerName) {
-		if (game.isValidPlayerName(playerName)) {
+        if (game.isValidPlayerName(playerName)) { // If the name provided by the client is not taken by the opponent
+            
             this.name = playerName;
             sendMessage(ProtocolMessages.HANDSHAKE);
             game.setPlayer(this);
-        } else {
+        
+        } else {  // If the name is already taken by the opponent
+        
             nameExists();
+        
         }
 	}
 
@@ -215,16 +237,16 @@ public class GameClientHandler implements Runnable, ServerProtocol {
     
     @Override
 	public void gameSetup(String playerName) {
+        if (playerName.equals(name)){ // If the first move in the game is for this client
+            makeMove();
+        }
 		sendMessage(ProtocolMessages.SETUP+ProtocolMessages.DELIMITER+playerName);
 	}
 
     @Override
     public void move(int x, int y) {
+        timer.cancel(); // Cancels the timer that's set before each move.
         game.makeMove(x, y, false);
-        synchronized (game) { 
-            task.cancel();
-            game.notifyAll();
-        }
     }
 
 	@Override
@@ -251,11 +273,12 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 
 	@Override
 	public void gameOver(String playerName, boolean winType) {
-		sendMessage(ProtocolMessages.GAMEOVER+ProtocolMessages.DELIMITER+playerName+ProtocolMessages.DELIMITER+winType);
+        sendMessage(ProtocolMessages.GAMEOVER+ProtocolMessages.DELIMITER+playerName+ProtocolMessages.DELIMITER+winType);
 	}
 
 	@Override
 	public void exit() {
+        game.endGame(false, name, null);
 		shutdown();
 	}
 

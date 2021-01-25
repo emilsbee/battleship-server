@@ -1,6 +1,7 @@
 package constants;
 
 public class GameConstants {
+    // Board dimensions
     public static final int BOARD_SIZE_X = 15;
     public static final int BOARD_SIZE_Y = 10;
 
@@ -27,6 +28,7 @@ public class GameConstants {
     public static final String FIELD_TYPE_CARRIER_BACK_MID = "CARRIER_BACK_MID";
     public static final String FIELD_TYPE_CARRIER_BACK = "CARRIER_BACK";
 
+    // Field types that are marked as hit in the client boards
     public static final String FIELD_TYPE_HIT_EXTENSION = "_HIT";
 
     public static final String FIELD_TYPE_WATER_HIT = "WATER_HIT";

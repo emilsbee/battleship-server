@@ -2,6 +2,7 @@ package game;
 
 // External imports
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 // Internal imports
 import client.GameClientHandler;
@@ -27,20 +28,26 @@ public class Game implements Runnable {
     // The server TUI
     private GameServerTUI view;
 
-    // Indicator for actual start of gane
+    // Indicator whether the game has started. True if game is going on and false when it ends and before it starts.
     private boolean gameStarted;
 
     // Re-usable random
     Random random;
 
+    // Indicates which players move it is. The player's names are used for this indicator.
     private String currentMove;
 
+    // Indicates which player made the previous move before current move. Also uses players names.
+    private String previousMove;
+
+    // The thread on which 5 minute game loop runs
+    private Thread gameThread;
 
     /**
-     * Constructor that initialises this game's id and the terminal view, and sets the game started to false
-     * since the game only starts after both players have sent in their boards.
-     * @param view
-     * @param gameId
+     * Constructor that initialises this game's id, the terminal view, and sets the game started to false
+     * since the game only starts after both players have sent in their boards. Also initialises both player's points to 0.
+     * @param view The server's TUI.
+     * @param gameId The id of this game given by the server.
      */
     public Game(GameServerTUI view, int gameId) {
         this.gameId = gameId; 
@@ -52,37 +59,42 @@ public class Game implements Runnable {
     }
 
     /**
-     * The main game loop. This is called when this game is put in a thread and the start() 
-     * method is called. Although this isn't exactly a loop, a timer is set for 5 minutes after which the
-     * game automatically ends and whoever has most points wins, if equal then tie. When {@link #determineMove()}
-     * method is called, the thread goes to sleep and waits until one of the GameClientHandlers wakes it up which indicates
-     * that either a move was made by the client or it was a late move. 
+     * The game loop thread. A while loop is set to end in 5 minutes or when the thread is interrupted because
+     * the game ended due to some other reason. The loop sleeps for one second every loop to  
+     * to be more efficient for the processor since it doesn't really
+     * have to be accurate to milliseconds. It is also decided in this thread which player goes first 
+     * and that's randomly found by the {@link #decideWhoStart()} methods. Then both players are informed 
+     * about this with the game setup message. 
      */
     @Override
 	public void run() {
+        // Randomly chooses which players goes first and informs them about that
         currentMove = decideWhoStart();
         player1.gameSetup(currentMove);
         player2.gameSetup(currentMove);
         
-
         view.showMessage("Game " + gameId + ": started");
         
         long t = System.currentTimeMillis(); 
         long end = t + 300000; // Ends in 5 minutes
 
-        while(System.currentTimeMillis() < end) {
-                                                   
-            determineMove();
-
+        // The game loop
+        while(System.currentTimeMillis() < end && !gameThread.isInterrupted()) {
             try {
-                synchronized (this) {
-                    wait();
-                }
-			} catch (InterruptedException e) {}
+                  TimeUnit.SECONDS.sleep(1);
+			} catch (InterruptedException e) {
+                gameThread.interrupt();
+                break;
+            }
         }
-        endGame(true, null, null);
+
+        if (!gameThread.isInterrupted()) { // If the game ended because timer ran out 
+            endGame(true, null, null);
+        }
+
         view.showMessage("Game " + gameId + ": ended!");
     }
+
 
     /**
      * Method to start the game by creating a separate thread for it. This is only called
@@ -90,126 +102,189 @@ public class Game implements Runnable {
      */
     public void startGame() {
         gameStarted = true;
-        new Thread(this).start();
+        gameThread = new Thread(this);
+        gameThread.start();
     }
 
     /**
-     * Determines and informs who won and with what type of win: forfeitextd 
+     * Determines and informs who won and with what type of win: forfeit, time finished or winning by destroying all ships.
      * @param timeFinished Indicates whether game is over because 5 minutes are up.
      * @param quitPlayerName Indicates whether the game is over because one of the players quit.
      * @param winnerName Indicates who won in the case that all ships are destroyed in the game for one of the players.
      */
     public void endGame(boolean timeFinished, String quitPlayerName, String winnerName) {
 
-        if (quitPlayerName != null) {
+        if (gameStarted) { // If game has not yet ended. Prevents from being called after game has already once ended.
 
-            if (player1.getName().equals(quitPlayerName)) {
-                player2.gameOver(player2.getName(), false);
-            } else {
-                player1.gameOver(player1.getName(), false);
-            }
+            if (quitPlayerName != null) { // If one of the players has quit the game
+                gameThread.interrupt(); // Stops the 5 minute game loop from continuing. 
 
-        } else if (timeFinished) { // Game ended because the 5 minute timer ran out
+                if (player1.getName().equals(quitPlayerName)) { // If player 1 quit
+                    
+                    player2.gameOver(player2.getName(), false);
 
-            if (player1Points > player2Points) { // Player 1 wins
-                player1.gameOver(player1.getName(), true);
-                player2.gameOver(player1.getName(), true);                
-            } else if (player1Points < player2Points) { // Player 2 wins
-                player1.gameOver(player2.getName(), true);
-                player2.gameOver(player2.getName(), true); 
-            } else { // Tie
-                player1.gameOver("", true);
-                player2.gameOver("", true); 
-            }
+                } else { // If player 2 quit
 
-        } else { // Game finished because all ships were destroyed
-            if (player1.getName().equals(winnerName)) { // If player 1 wins
-                player1.gameOver(player1.getName(), true);
-                player2.gameOver(player1.getName(), true);
-            } else { // If player 2 wins
-                player1.gameOver(player2.getName(), true);
-                player2.gameOver(player2.getName(), true);
+                    player1.gameOver(player1.getName(), false);
+                
+                }
+    
+            } else if (timeFinished) { // Game ended because the 5 minute timer ran out
+    
+                if (player1Points > player2Points) { // Player 1 wins
+
+                    player1.gameOver(player1.getName(), true);
+                    player2.gameOver(player1.getName(), true);                
+                
+                } else if (player1Points < player2Points) { // Player 2 wins
+
+                    player1.gameOver(player2.getName(), true);
+                    player2.gameOver(player2.getName(), true); 
+                
+                } else { // Tie
+                
+                    player1.gameOver("", true);
+                    player2.gameOver("", true); 
+                
+                }
+    
+            } else { // Game finished because all ships were destroyed
+                gameThread.interrupt(); // Stops the 5 minute game loop from continuing.
+                
+                if (player1.getName().equals(winnerName)) { // If player 1 wins
+    
+                    player1.gameOver(player1.getName(), true);
+                    player2.gameOver(player1.getName(), true);
+
+                } else { // If player 2 wins
+    
+                    player1.gameOver(player2.getName(), true);
+                    player2.gameOver(player2.getName(), true);
+                }
             }
         }
-
+        gameStarted = false;
     }
 
-    /**
-     * Determines which player is supposed to make a move and then asks the respective 
-     * player's GameClientHandler thread for the move.
-     */
-    public void determineMove() {
-        if (player1.getName().equals(currentMove)) {
-            player1.makeMove();
-        } else {
-            player2.makeMove();
-        }
-    }
   
     /**
      * Method that is called by GameClientHandler threads when their respective client has made a move
-     * or didn't make a move (late move).
+     * or didn't make a move (late move). This method then updates both player's board and then sends those updates to both players.
+     * It also changes the currentMove and previousMove variables as well as calls the makeMove() method for the respective client thread
+     * to start the move timer. And also it adds points for hit and sunk ships. This method is synchronized because it could potentially be called 
+     * by both client threads at once.
      * @param x X coordinate of the move. 
      * @param y Y coordinate of the move.
-     * @param isLate Indicates whether the move was actually made by the client or they missed their move.
+     * @param isLate Indicates whether the move was actually made by the client or the timer sent it due to late move.
      */
-    public void makeMove(int x, int y, boolean isLate) {
-        String previousMove = currentMove;
-        boolean[] result;
-        if (player1.getName().equals(currentMove)) { // If player 1 made the move
-            result = player2Board.makeMove(x, y);
-            System.out.println(result[0] + " " + result[1] + " " + result[2]);
+    public synchronized void makeMove(int x, int y, boolean isLate) {
+        if (gameStarted) { // If game is actually going on. Prevents from making moves before game and after it has ended.
             
-            if (result[2]) { // If player 1's move destroyed all ships
-                player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
-                player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
-                endGame(false, null, player1.getName());
-                Thread.currentThread().interrupt();
-            } else { // If player 1's move didn't destroy all ships
-
-                // Adds the points
-                if (result[0]) {
-                    player1Points++;
-                } else {
-                    currentMove = player2.getName();
-                } 
-
-                if (result[1]) {
-                    player1Points++;
-                }
-
-                player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
-                player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+            // The array for information about the move that will be received from on of the players boards.
+            // It includes result[0]: isHit (whether a ship was hit), result[1]: isSunk (whether a ships was sunk)
+            // and result[2]: areAllShipsDestryoed which indicates that one of the players has won.
+            boolean[] result; 
+            
+            if (currentMove.equals(player1.getName())) { // If player 1 made the move
                 
-            }
+                if (isLate) { // If player 1 made a late move
 
-        } else { // If player 2 made the move
-            result = player1Board.makeMove(x, y);
-            System.out.println(result[0] + " " + result[1] + " " + result[2]);
+                    currentMove = player2.getName();
+                    previousMove = player1.getName();
+                    player1.update(x, y, false, false, isLate, previousMove, currentMove);
+                    player2.update(x, y, false, false, isLate, previousMove, currentMove);
+                    player2.makeMove();
+                
+                } else { // If player 1 made a move on time
 
-            if (result[2]) { // If player 2's move destroyed all ships
-                player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);  
-                player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
-                endGame(false, null, player2.getName());
-                Thread.currentThread().interrupt();
-            } else { // If player 2's move didn't destroy all ships
+                    result = player2Board.makeMove(x, y); // Update the player 2 board and receive the results from that move.
+                    
+                    if (result[2]) { // If player 1's move destroyed all ships
 
-                // Adds the points
-                if (result[0]) {
-                    player2Points++;
-                } else {
-                    currentMove = player1.getName();
-                } 
+                        player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                        player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                        endGame(false, null, player1.getName());
 
+                    } else { // If player 1's move didn't destroy all ships
+        
+                        if (result[0]) { // If player 1 move hit a shit
+                            
+                            player1Points++;
 
-                if (result[1]) {
-                    player2Points++;
+                            if (result[1]) { // If ship was sunk
+                                player1Points++;
+                            }
+
+                            currentMove = player1.getName(); 
+                            previousMove = player1.getName();
+                            player1.makeMove();
+
+                        } else { // If no ships were hit
+                            
+                            currentMove = player2.getName();
+                            previousMove = player1.getName();
+                            player2.makeMove();
+
+                        } 
+        
+                        player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                        player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                        
+                    }
+                
                 }
+ 
+    
+            } else { // If player 2 made the move
 
-                player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
-                player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                if (isLate) { // If player 2 made a late move
+
+                    currentMove = player1.getName();
+                    previousMove = player2.getName();
+                    player1.update(x, y, false, false, isLate, previousMove, currentMove);
+                    player2.update(x, y, false, false, isLate, previousMove, currentMove);
+                    player1.makeMove();
+
+                } else { // If player 2 made a move on time
+
+                    result = player1Board.makeMove(x, y); // Update the player 1 board and receive the results from that move.
+        
+                    if (result[2]) { // If player 2's move destroyed all ships
+                        
+                        player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);  
+                        player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                        endGame(false, null, player2.getName());
+                        
+                    } else { // If player 2's move didn't destroy all ships
+        
+                        if (result[0]) { // If ship was hit
+                            
+                            player2Points++;
+
+                            if (result[1]) { // If ship was sunk
+                                player2Points++;
+                            }
+
+                            currentMove = player2.getName(); 
+                            previousMove = player2.getName();
+                            player2.makeMove();
+
+                        } else { // If no ship was hit
+
+                            currentMove = player1.getName();
+                            previousMove = player2.getName();
+                            player1.makeMove();
+
+                        } 
+        
+                        player1.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                        player2.update(x, y, result[0], result[1], isLate, previousMove, currentMove);
+                    }
+                
+                }
+ 
+    
             }
-
         }
 
         
@@ -219,7 +294,7 @@ public class Game implements Runnable {
      * After a succesful handshake with the client whereby a uniqe name is gotten
      * this method is called by the GameClientHandler thread to add the client to the game. 
      * Starting from player1. So player1 will always be the first connected, then player 2.
-     * @param player The player to be added to the game.
+     * @param player The player instance to be added to the game.
      */
     public synchronized void setPlayer(GameClientHandler player) {
         if (player1 == null) {
@@ -254,14 +329,23 @@ public class Game implements Runnable {
      */
     public synchronized void setBoard(String encodedBoard, String playerName) {
         if (player1.getName().equals(playerName)) {
+
             player1Board = new GameBoard(encodedBoard);
+            
             if (player2Board != null && !gameStarted) {
+            
                 startGame();
+            
             }
+
         } else if (player2.getName().equals(playerName)) {
+            
             player2Board = new GameBoard(encodedBoard);
+            
             if (player1Board != null && !gameStarted) {
+            
                 startGame();
+            
             }
         }
     }
@@ -270,6 +354,7 @@ public class Game implements Runnable {
      * Used by GameClientHandler thread to check whether the client has submitted a uniqe name. 
      * Since player1 is always connected first there is a check for player1 == null and the name, whatever it is, 
      * has to be unique. Then when player2 connects the name provided by it is compared to player1 name by the second part.
+     * This method is synchronized because it could potentially be called by boht threads at once.
      * @param playerName The name to be checked
      * @return Whether the name can be used in this game.
      */
@@ -294,10 +379,26 @@ public class Game implements Runnable {
     }
 
     /**
-     * To get the current game's id that is assigned to it by the server.
+     * Getter to get the current game's id that is assigned to it by the server.
      * @return The id of the game.
      */
     public int getGameId() {
         return gameId;
+    }
+
+    /**
+     * Getter to check whether the game has ended.
+     * @return Whether the game has ended.
+     */
+    public boolean getGameEnded() {
+        return this.gameStarted;
+    }
+
+    /**
+     * Getter for who has the current move in the game.
+     * @return The player name who has the current move.
+     */
+    public String getCurrentMove() {
+        return currentMove;
     }
 }

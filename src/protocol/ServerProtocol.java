@@ -3,74 +3,73 @@ package protocol;
 public interface ServerProtocol {
 
     /**
-    * Returns a String to be sent as a response to a Client HELLO request,
-    * which is just the ProtocolMessages.HELLO
-    * @return String to be sent to client as a handshake response.
+    * Handles the handshake sent in by the client. Checks whether the name included
+    * is not already taken in the game, if it isn't then sets that name in the game,
+    * if it is then sends back {@link #nameExists()}. 
+    * @param playerName The name submitted by the client in the handshake.
     */
    public void handleHello(String playerName);
    
    /**
     * When client tries to connect but in handshake includes the same name as the opponent.
-    * @return The formatted message to send back to client. 
+    * This methods sends back message informing the client of that.
     */
     public void nameExists();
 
+    /**
+     * Receives the encoded version of client's game board and sets it in the game. The setter method
+     * in the game takes care of decoding the board.
+     * @param encodedBoard The encoded game board sent in by the client.
+     */
     public void clientBoard(String encodedBoard);
 
    /**
-    * Method that sends to player their opponents name. The message construct:
-    * ProtocolMessages.ENEMYNAME + ProtocolMessages.DELIMITER + playerName
-    * @param playerName the name of the player requesting the enemies name 
-    * @return the enemy name to send to the other player. 
+    * Method that sends to the client their opponents name. 
+    * @param playerName The opponents name. 
     */
    public void enemyName(String playerName);
 
    
    /**
-    * Sends out to clients who begins the game.
-    * The message construct: ProtocolMessages.SETUP + ProtocolMessages.DELIMITER + playerName
-    * @return the name of player that goes first.
+    * Sends out to clients the name of the player that has the first move in the game. 
+    * Also starts the move timer for the player that has the first move.
+    @param playerName The name of the player that goes first.
     */
    public void gameSetup(String playerName);
 
    /**
-    * A move that the client makes.
-    * The construct of message received: ProtocolMessages.MOVE + ProtocolMessages.DELIMITER + xCoordinate + ProtocolMessages.DELIMITER + yCoordinate
-    * @param x The x value of the move.
-    * @param y The y value of the move
-    * @return whether the move was a hit or a miss.
+    * A move that the client makes. This method then make the respective move in the game
+    * and also cancels the timer that was set for the move.
+    * @param x The X coordinate of the move.
+    * @param y The Y coordinate of the move
     */
    public void move(int x, int y); 
 
    /**
-    * Method to update both clients after one of them has made a move. The update
-    * includes the x,y coordinates of the move, whether the move was a hit, and whether
-    * the move sunk a ship and finally which  client has the next move.
-    * Message construct: ProtocolMessages.UPDATE + ProtocolMessages.DELIMITER + xCoordinate +
-    * ProtocolMessages.DELIMITER + yCoordinate + ProtocolMessages.DELIMITER + isHit + ProtocolMessages.DELIMITER +
-    * isSunk + ProtocolMessages.DELIMITER + playerName
-    * @param x the x value of the previous move
-    * @param y the y value of the previous move
-    * @param isHit indicates whether previous move was a hit on a ship
-    * @param isSunk indicates whether previous move sunk a whole ship
-    * @param isTurn indicates whether the client has the move now
-    * @return the update to both clients about the previous move.
+    * Method to update both clients after one of them has made a move. 
+    * @param x the X coordinate of the move made
+    * @param y the Y coordinate of the move made
+    * @param isHit indicates whether move was a hit on a ship
+    * @param isSunk indicates whether move sunk a whole ship
+    * @param isLate indicates whether the previos move was a late move 
+    * @param lastPlayerName The name of the player that made the move
+    * @param nextPlayerName The name of the player that should make the next move
     */
    public void update(int x, int y, boolean isHit, boolean isSunk, boolean isLate, String lastPlayerName, String nextPlayerName);
 
 
    /**
-    * Method that informs clients when game ends. This could happen if 5 minutes pass, someone sinks all of opponent's ships
+    * Method that informs clients when game ends. 
+    * This could happen if 5 minutes pass, someone sinks all of opponent's ships
     * or one of the clients disconnects.
-    * The message construct: ProtocolMessages.GAMEOVER + ProtocolMessages.DELIMITER + result 
-    * @param result integer from 0 to 2. 0: win, 1: lose, 2:tie.
-    * @return the result of the game which is an int from 0 to 2 that represents whether the client won: 0, lost:1 or it is a tie:2.
+    * @param playerName Of the winner, or empty string if it's a tie.
+    * @param winType indicates what kind of end it was in the game. True: if game ended normally, false if one of the players quit.  
     */
    public void gameOver(String playerName, boolean winType);
 
    /**
-    * When one of the players indicates exit, the whole game is stopped and both players disconnected.
-    * Received message construct: ProtocolMessages.EXIT
+    * When of the players wish to exit this method informs the game about it and
+    * shuts down communication with the client.
     */
    public void exit();
 }
