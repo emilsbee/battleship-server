@@ -16,6 +16,7 @@ import exceptions.ProtocolException;
 import game.Game;
 import protocol.ProtocolMessages;
 import protocol.ServerProtocol;
+import server.GameServer;
 import tui.GameServerTUI;
 import tui.TerminalColors;
 
@@ -48,13 +49,16 @@ public class GameClientHandler implements Runnable, ServerProtocol {
     // Re-usable timer variable for scheduling the player move timer task
     private Timer timer;
 
+    // Server instance
+    private GameServer server;
+
     /**
      * Constructs a new GameClientHandler. Opens the BufferedWriter and BufferedReader.
      * @param socket The client socket.
      * @param game The game instance.
      * @param view the terminal view of the server for displaying messages and prompting questions.
 	 */
-    public GameClientHandler(Socket socket, Game game, GameServerTUI view) {
+    public GameClientHandler(Socket socket, Game game, GameServerTUI view, GameServer server) {
         try {
 
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -62,7 +66,7 @@ public class GameClientHandler implements Runnable, ServerProtocol {
             this.socket = socket;
             this.game = game;
             this.view = view;
-            
+            this.server = server;
         } catch (IOException e) {
             view.showMessage("Game "+ game.getGameId() + ", player: " + name + " is having an IO problem creating input and output streams.");
             shutdown();
@@ -197,7 +201,7 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 	private void shutdown() {
         if (in != null && out != null && socket != null) {
             try {
-                if (!game.getGameEnded()) {
+                if (!game.getGameStarted()) {
                     game.endGame(false, name, null);
                 }
                 in.close();

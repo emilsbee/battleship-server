@@ -27,7 +27,8 @@ public class GameServerTUI {
      * @return The answer to the question.
      */
     public String getString(String question) {
-		System.out.print(question);
+        System.out.print(question);
+        in = new Scanner(System.in);
 		return in.nextLine();
 	}
 

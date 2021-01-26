@@ -396,7 +396,7 @@ public class Game implements Runnable {
      * Getter to check whether the game has ended.
      * @return Whether the game has ended.
      */
-    public boolean getGameEnded() {
+    public boolean getGameStarted() {
         return this.gameStarted;
     }
 
@@ -406,5 +406,19 @@ public class Game implements Runnable {
      */
     public String getCurrentMove() {
         return currentMove;
+    }
+
+    /**
+     * Getter for player 1 points
+     */
+    public int getPlayer1Points() {
+        return this.player1Points;
+    }
+
+    /**
+     * Getter for player 2 points
+     */
+    public int getPlayer2Points() {
+        return this.player2Points;
     }
 }

@@ -4,6 +4,8 @@ package server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 // Internal imports
 import client_handler.GameClientHandler;
@@ -16,6 +18,7 @@ import tui.TerminalColors;
  * This class represents the game server that accepts clients and matches them up for a game. 
  */
 public class GameServer implements Runnable {
+    private List<GameClientHandler> clients;
     
     // Server socket for the game server
     private ServerSocket serverSocket;
@@ -31,6 +34,16 @@ public class GameServer implements Runnable {
 
     // The port number on which server is hosted.
     private int port;
+
+
+    public ServerSocket getServerSocket() {
+        return this.serverSocket;
+    }
+
+    public int getGameCount() {
+        return this.gameCount;
+    }
+
 
     /**
      * Starts the server on a new thread.
@@ -63,9 +76,9 @@ public class GameServer implements Runnable {
             port = 0;
         
         }
-        
+        clients = new ArrayList<>();
         view = new GameServerTUI();
-        view.showMessage(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server! " + TerminalColors.RESET);
+        view.showMessage(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET);
         
         gameCount = 0;
     }
@@ -90,14 +103,15 @@ public class GameServer implements Runnable {
                     view.showMessage(TerminalColors.BLUE_BOLD + "Listening for player connections..." + TerminalColors.RESET);
                     Socket socket = serverSocket.accept(); // Listens for new clients
                     view.showMessage(TerminalColors.GREEN_BOLD + "New client connected!" + TerminalColors.RESET);
-
+                    
                     if (clientWaitingForGame == null) { // If nobody is waiting for an opponent
-                             
+                        
                         gameCount++; // Increments the gameCount so next game has unique id
                         game = new Game(view, gameCount);
-
+                        
                         // Creates and starts a new client handler
-                        GameClientHandler handler = new GameClientHandler(socket, game, view);
+                        GameClientHandler handler = new GameClientHandler(socket, game, view, this);
+                        clients.add(handler);
                         new Thread(handler).start();
 
                         // Indicates that someone is waiting for a game
@@ -106,7 +120,8 @@ public class GameServer implements Runnable {
                     } else { // If somebody is waiting for an opponent
 
                         // Creates amd starts a new client handler
-                        GameClientHandler handler = new GameClientHandler(socket, game, view);
+                        GameClientHandler handler = new GameClientHandler(socket, game, view, this);
+                        clients.add(handler);
                         new Thread(handler).start();
 
                         // Indicates that nobody is waiting for a game
@@ -150,5 +165,22 @@ public class GameServer implements Runnable {
 			}
             
         }
+    }
+
+    /**
+     * Removes a client from the client list when the client disconnects.
+     * @param client The client to be removed.
+     */
+    public void removeClient(GameClientHandler client) {
+        clients.remove(client);
+    }
+
+
+    /**
+     * To get the number of clients currently connected to the server
+     * @return The number of clients connected to the server
+     */
+    public int getClientCount() {
+        return clients.size();
     }
 }
