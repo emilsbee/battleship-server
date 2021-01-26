@@ -1,5 +1,8 @@
 package protocol;
 
+/**
+ * Interface that must be implemented by a class that communicates with a client.
+ */
 public interface ServerProtocol {
 
     /**

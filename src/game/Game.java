@@ -9,6 +9,12 @@ import client.GameClientHandler;
 import gameboard.GameBoard;
 import tui.GameServerTUI;
 
+/**
+ * This class represents an instance of a game. Each game runs on a separate thread, or more precisely the 5 minute game
+ * loop runs on the thread. This class keeps track of player moves and updates them on the respective game boards. It also keeps track
+ * of player points. This class mainly communicates with game client handle threads to inform clients about what's going on in the game and
+ * receive moves from them.
+ */
 public class Game implements Runnable {
     // The id of the game
     private int gameId;

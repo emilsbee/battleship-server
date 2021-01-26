@@ -7,11 +7,14 @@ import java.net.Socket;
 
 // Internal imports
 import client.GameClientHandler;
-import exceptions.ExitProgram;
+import exceptions.ServerSocketException;
 import game.Game;
 import tui.GameServerTUI;
 import tui.TerminalColors;
 
+/**
+ * This class represents the game server that accepts clients and matches them up for a game. 
+ */
 public class GameServer implements Runnable {
     
     // Server socket for the game server
@@ -112,26 +115,25 @@ public class GameServer implements Runnable {
 
                 }
 
-            } catch (ExitProgram ee) {
-
-                view.showMessage(TerminalColors.RED_BOLD + ee.getMessage()+ TerminalColors.RESET);
-                openNewSocket = false;
-            
             } catch (IOException ie) {
             
-                view.showMessage(TerminalColors.RED_BOLD + "A server IO error occurred: " + ie.getMessage()+ TerminalColors.RESET);
+                view.showMessage(TerminalColors.RED_BOLD + "An IO occured listening to new clients. " + TerminalColors.RESET);
                 openNewSocket = false;
             
-            }
+            } catch (ServerSocketException e) {
+				view.showMessage(TerminalColors.RED_BOLD + e.getMessage()+ TerminalColors.RESET);
+                openNewSocket = false;
+			}
         }
         
 	}
 
     /**
      * Sets up a server socket on a specific port that is either given by the user or is prompted. 
+     * @throws ServerSocketException
      * @throws ExitProgram if socket can't be created on the specific port.
      */
-    public void setup() throws ExitProgram {
+    public void setup() throws ServerSocketException  {
         serverSocket = null;
 
         while (serverSocket == null) {
@@ -141,11 +143,12 @@ public class GameServer implements Runnable {
             }
 
             try {
-                serverSocket = new ServerSocket(port);
+				serverSocket = new ServerSocket(port);
                 view.showMessage(TerminalColors.GREEN_BOLD + "Server started on port " + port + TerminalColors.RESET);
-            } catch (IOException e) {
-                throw new ExitProgram(TerminalColors.RED_BOLD + "Game server stopped due to failed socket creation. Try again by starting server on a different port perhaps."+ TerminalColors.RESET);
-            }
+			} catch (IOException e) {
+				throw new ServerSocketException("There was a problem establishing the server socket.");
+			}
+            
         }
     }
 }

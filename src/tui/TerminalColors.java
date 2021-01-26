@@ -1,5 +1,8 @@
 package tui;
 
+/**
+ * This class contains the various colors and color combinations for printing in the terminal.
+ */
 public class TerminalColors {
     // Reset
     public static final String RESET = "\033[0m"; // Text Reset

@@ -1,5 +1,8 @@
 package constants;
 
+/**
+ * This class contains commonly used values from the game. 
+ */
 public class GameConstants {
     // Board dimensions
     public static final int BOARD_SIZE_X = 15;

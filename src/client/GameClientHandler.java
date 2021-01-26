@@ -10,13 +10,21 @@ import java.net.Socket;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import exceptions.ClientUnavailableException;
 // Internal imports
 import exceptions.ProtocolException;
 import game.Game;
 import protocol.ProtocolMessages;
 import protocol.ServerProtocol;
 import tui.GameServerTUI;
+import tui.TerminalColors;
 
+/**
+ * Represents the communication with a client. Each client has its own game client handler thread that handles the communication.
+ * This class listens and writes messages. So it also implements the server protocol that makes sure all communication is by the protocol.
+ * Furthermore, it handles the messages which means that it communicates with the game instance this client is a part of. Both the game calls methods
+ * from this class and this class calls method of game. Hence it is a middle man between the client and the game. 
+ */
 public class GameClientHandler implements Runnable, ServerProtocol {
     // The socket input and output streams    
     private BufferedReader in;
@@ -56,7 +64,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
             this.view = view;
             
         } catch (IOException e) {
-
             view.showMessage("Game "+ game.getGameId() + ", player: " + name + " is having an IO problem creating input and output streams.");
             shutdown();
         
@@ -158,15 +165,16 @@ public class GameClientHandler implements Runnable, ServerProtocol {
     /**
      * Sends a String message to the client.
      * @param message The message to send to the client.
+     * @throws ClientUnavailableException
      */
-    public void sendMessage(String message)  {
+    public void sendMessage(String message) throws ClientUnavailableException  {
         if (out != null) {
             try {
                 out.write(message);
                 out.newLine();
                 out.flush();
             } catch (IOException e) {
-                shutdown();
+                throw new ClientUnavailableException("Error while writing to a client.");
             }
         } 
     }
@@ -209,9 +217,14 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 	public void handleHello(String playerName) {
         if (game.isValidPlayerName(playerName)) { // If the name provided by the client is not taken by the opponent
             
-            this.name = playerName;
-            sendMessage(ProtocolMessages.HANDSHAKE);
-            game.setPlayer(this);
+            try {
+                this.name = playerName;
+				sendMessage(ProtocolMessages.HANDSHAKE);
+                game.setPlayer(this);
+			} catch (ClientUnavailableException e) {
+                view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
+                shutdown();
+			}
         
         } else {  // If the name is already taken by the opponent
         
@@ -222,12 +235,22 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 
 	@Override
 	public void nameExists() {
-        sendMessage(ProtocolMessages.NAME_EXISTS);
+        try {
+			sendMessage(ProtocolMessages.NAME_EXISTS);
+		} catch (ClientUnavailableException e) {
+            view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
+            shutdown();
+		}
     }
 
     @Override
 	public void enemyName(String playerName) {
-		sendMessage(ProtocolMessages.ENEMYNAME+ProtocolMessages.DELIMITER+playerName);
+		try {
+			sendMessage(ProtocolMessages.ENEMYNAME+ProtocolMessages.DELIMITER+playerName);
+		} catch (ClientUnavailableException e) {
+            view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
+            shutdown();
+		}
 	}
 
     @Override
@@ -240,7 +263,12 @@ public class GameClientHandler implements Runnable, ServerProtocol {
         if (playerName.equals(name)){ // If the first move in the game is for this client
             makeMove();
         }
-		sendMessage(ProtocolMessages.SETUP+ProtocolMessages.DELIMITER+playerName);
+		try {
+			sendMessage(ProtocolMessages.SETUP+ProtocolMessages.DELIMITER+playerName);
+		} catch (ClientUnavailableException e) {
+            view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
+            shutdown();
+		}
 	}
 
     @Override
@@ -251,29 +279,39 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 
 	@Override
 	public void update(int x, int y, boolean isHit, boolean isSunk, boolean isLate, String lastPlayerName, String nextPlayerName) {
-        sendMessage(
-            ProtocolMessages.UPDATE + 
-            ProtocolMessages.DELIMITER + 
-            String.valueOf(x) +
-            ProtocolMessages.DELIMITER + 
-            String.valueOf(y) + 
-            ProtocolMessages.DELIMITER +
-            String.valueOf(isHit) + 
-            ProtocolMessages.DELIMITER +
-            String.valueOf(isSunk) + 
-            ProtocolMessages.DELIMITER +
-            String.valueOf(isLate) +
-            ProtocolMessages.DELIMITER +
-            lastPlayerName +
-            ProtocolMessages.DELIMITER +
-            nextPlayerName
-        );
+        try {
+			sendMessage(
+			    ProtocolMessages.UPDATE + 
+			    ProtocolMessages.DELIMITER + 
+			    String.valueOf(x) +
+			    ProtocolMessages.DELIMITER + 
+			    String.valueOf(y) + 
+			    ProtocolMessages.DELIMITER +
+			    String.valueOf(isHit) + 
+			    ProtocolMessages.DELIMITER +
+			    String.valueOf(isSunk) + 
+			    ProtocolMessages.DELIMITER +
+			    String.valueOf(isLate) +
+			    ProtocolMessages.DELIMITER +
+			    lastPlayerName +
+			    ProtocolMessages.DELIMITER +
+			    nextPlayerName
+			);
+		} catch (ClientUnavailableException e) {
+            view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
+            shutdown();
+		}
 		
 	}
 
 	@Override
 	public void gameOver(String playerName, boolean winType) {
-        sendMessage(ProtocolMessages.GAMEOVER+ProtocolMessages.DELIMITER+playerName+ProtocolMessages.DELIMITER+winType);
+        try {
+			sendMessage(ProtocolMessages.GAMEOVER+ProtocolMessages.DELIMITER+playerName+ProtocolMessages.DELIMITER+winType);
+		} catch (ClientUnavailableException e) {
+            view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
+            shutdown();
+		}
 	}
 
 	@Override

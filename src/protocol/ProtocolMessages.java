@@ -1,5 +1,8 @@
 package protocol;
 
+/**
+ * Contains the strings that represent messages in the protocol.
+ */
 public class ProtocolMessages {
     // Delimiter used to separate arguments sent over the network.
     public static final String DELIMITER = ";";

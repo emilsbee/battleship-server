@@ -3,6 +3,10 @@ package gameboard;
 // Internal imports
 import constants.GameConstants;
 
+/**
+ * This class represents a game board for a client. It makes moves on the board and keeps track of what has been already hit
+ * and whether a certain ship has sunk. It is always created from an encoded board sent in by the client which is then decoded here.
+ */
 public class GameBoard {
     // The game board
     private String[][] board;

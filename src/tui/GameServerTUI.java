@@ -3,6 +3,9 @@ package tui;
 // External imports
 import java.util.Scanner;
 
+/**
+ * This class is a TUI for the game server. Is prompts questions to the user and displays messages.
+ */
 public class GameServerTUI {
     Scanner in;
 
