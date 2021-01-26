@@ -5,7 +5,7 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 // Internal imports
-import client.GameClientHandler;
+import client_handler.GameClientHandler;
 import gameboard.GameBoard;
 import tui.GameServerTUI;
 

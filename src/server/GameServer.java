@@ -6,7 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 // Internal imports
-import client.GameClientHandler;
+import client_handler.GameClientHandler;
 import exceptions.ServerSocketException;
 import game.Game;
 import tui.GameServerTUI;
