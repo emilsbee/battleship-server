@@ -17,7 +17,11 @@ import java.net.Socket;
 import server.GameServer;
 
 
-
+/**
+ * These tests mostly test out the protocol messages. It send the messages on behalf of clients and expects to receives the 
+ * correct protocol messages back. Although there is some interacation with the game by the GameClientHandler that is tested,
+ * the tests don't take into account the correctness of the game mechanics. 
+ */
 public class GameClientHandlerTest {
     private static final int PORT = 8888;
     private static final String FIRST_PLAYER_NAME = "Albert";
