@@ -16,7 +16,6 @@ import exceptions.ProtocolException;
 import game.Game;
 import protocol.ProtocolMessages;
 import protocol.ServerProtocol;
-import server.GameServer;
 import tui.GameServerTUI;
 import tui.TerminalColors;
 

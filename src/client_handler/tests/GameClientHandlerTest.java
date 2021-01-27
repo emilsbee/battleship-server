@@ -2,15 +2,11 @@ package client_handler.tests;
 
 // External imports
 import org.junit.jupiter.api.*;
-
 import client_handler.GameClientHandler;
 import exceptions.ProtocolException;
-import game.Game;
 import protocol.ProtocolMessages;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
