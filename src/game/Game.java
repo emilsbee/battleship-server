@@ -49,6 +49,7 @@ public class Game implements Runnable {
     // The thread on which 5 minute game loop runs
     private Thread gameThread;
 
+    private boolean quitBeforeStart;
     /**
      * Constructor that initialises this game's id, the terminal view, and sets the game started to false
      * since the game only starts after both players have sent in their boards. Also initialises both player's points to 0.
@@ -168,6 +169,8 @@ public class Game implements Runnable {
                     player2.gameOver(player2.getName(), true);
                 }
             }
+        } else {
+            quitBeforeStart = true;
         }
         gameStarted = false;
     }
@@ -184,6 +187,12 @@ public class Game implements Runnable {
      * @param isLate Indicates whether the move was actually made by the client or the timer sent it due to late move.
      */
     public synchronized void makeMove(int x, int y, boolean isLate) {
+        if (player1.getSocket() == null) {
+            endGame(false, player2.getName(), null);
+        } else if (player2.getSocket() == null) {
+            endGame(false, player1.getName(), null);
+        }
+
         if (gameStarted) { // If game is actually going on. Prevents from making moves before game and after it has ended.
             
             // The array for information about the move that will be received from on of the players boards.
@@ -307,9 +316,13 @@ public class Game implements Runnable {
             player1 = player;
             view.showMessage("Game " + gameId + ": Player 1 added. Player name: " + player1.getName());
         } else if (player2 == null) {
-            player2 = player;
-            view.showMessage("Game " + gameId + ": Player 2 added. Player name: " + player2.getName());
-            sendEnemyName();
+            if (quitBeforeStart) {
+                player.gameOver(player.getName(), false);
+            } else {
+                player2 = player;
+                view.showMessage("Game " + gameId + ": Player 2 added. Player name: " + player2.getName());
+                sendEnemyName();
+            }
         } 
     }
 

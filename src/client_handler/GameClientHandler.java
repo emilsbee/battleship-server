@@ -71,7 +71,7 @@ public class GameClientHandler implements Runnable, ServerProtocol {
             this.view = view;
         } catch (IOException e) {
             view.showMessage("Game "+ game.getGameId() + ", player: " + name + " is having an IO problem creating input and output streams.");
-            shutdown();
+            exit();
         
         }
     }
@@ -99,10 +99,10 @@ public class GameClientHandler implements Runnable, ServerProtocol {
             }
         } catch (IOException e) {
             view.showMessage("Game "+ game.getGameId() + ", player: " + name + " is having an IO problem reading input.");
-            shutdown();
+            exit();
         } catch (ProtocolException pe) {
             view.showMessage("Game "+ game.getGameId() + ", player: " + name + pe.getMessage());
-            shutdown();
+            exit();
         }
     }
 
@@ -217,7 +217,15 @@ public class GameClientHandler implements Runnable, ServerProtocol {
                 view.showMessage(name + "'s thread is having an IO problem disconnecting.");
             }
         }
-	}
+    }
+    
+    /**
+     * Getter for the socket connection. Used for determining whether client has disconnected. 
+     * @return The socket.
+     */
+    public Socket getSocket() {
+        return socket;
+    }
 
 	@Override
 	public void handleHello(String playerName) {
