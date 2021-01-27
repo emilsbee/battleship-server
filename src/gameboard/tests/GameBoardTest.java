@@ -1,13 +1,12 @@
 package gameboard.tests;
 
+// External imports
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
-import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+// Internal imports
 import gameboard.GameBoard;
 import constants.GameConstants;
 
