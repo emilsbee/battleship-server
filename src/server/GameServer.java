@@ -4,8 +4,6 @@ package server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 // Internal imports
 import client_handler.GameClientHandler;
@@ -18,8 +16,10 @@ import tui.TerminalColors;
  * This class represents the game server that accepts clients and matches them up for a game. 
  */
 public class GameServer implements Runnable {
-    private List<GameClientHandler> clients;
-    
+    public static final String SERVER_START_MESSAGE = TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET;
+    public static final String SERVER_LISTENING_FOR_CONNECTIONS_MESSAGE = TerminalColors.BLUE_BOLD + "Listening for player connections..." + TerminalColors.RESET; 
+    public static final String SERVER_NEW_CLIENT_MESSAGE = TerminalColors.GREEN_BOLD + "New client connected!" + TerminalColors.RESET;
+
     // Server socket for the game server
     private ServerSocket serverSocket;
 
@@ -40,18 +40,12 @@ public class GameServer implements Runnable {
         return this.serverSocket;
     }
 
-    public int getGameCount() {
-        return this.gameCount;
-    }
-
-
     /**
      * Starts the server on a new thread.
      * @param args May include the server port,
      */
     public static void main(String[] args) {
-        GameServer server = new GameServer(args);
-        new Thread(server).start();
+        new GameServer(args);
     }
 
     /**
@@ -70,17 +64,17 @@ public class GameServer implements Runnable {
             } catch (NumberFormatException e) {
                 port = 8888;
             }
-
+            
         } else {
-        
+            
             port = 0;
-        
+            
         }
-        clients = new ArrayList<>();
         view = new GameServerTUI();
-        view.showMessage(TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET);
+        view.showMessage(GameServer.SERVER_START_MESSAGE);
         
         gameCount = 0;
+        new Thread(this).start();
     }
 
     /**
@@ -100,9 +94,9 @@ public class GameServer implements Runnable {
 
                 while (true) {
 
-                    view.showMessage(TerminalColors.BLUE_BOLD + "Listening for player connections..." + TerminalColors.RESET);
+                    view.showMessage(GameServer.SERVER_LISTENING_FOR_CONNECTIONS_MESSAGE);
                     Socket socket = serverSocket.accept(); // Listens for new clients
-                    view.showMessage(TerminalColors.GREEN_BOLD + "New client connected!" + TerminalColors.RESET);
+                    view.showMessage(GameServer.SERVER_NEW_CLIENT_MESSAGE);
                     
                     if (clientWaitingForGame == null) { // If nobody is waiting for an opponent
                         
@@ -111,9 +105,8 @@ public class GameServer implements Runnable {
                         
                         // Creates and starts a new client handler
                         GameClientHandler handler = new GameClientHandler(socket, game, view, this);
-                        clients.add(handler);
                         new Thread(handler).start();
-
+                        
                         // Indicates that someone is waiting for a game
                         clientWaitingForGame = handler;
                     
@@ -121,7 +114,6 @@ public class GameServer implements Runnable {
 
                         // Creates amd starts a new client handler
                         GameClientHandler handler = new GameClientHandler(socket, game, view, this);
-                        clients.add(handler);
                         new Thread(handler).start();
 
                         // Indicates that nobody is waiting for a game
@@ -141,7 +133,8 @@ public class GameServer implements Runnable {
 			}
         }
         
-	}
+    }
+
 
     /**
      * Sets up a server socket on a specific port that is either given by the user or is prompted. 
@@ -165,22 +158,5 @@ public class GameServer implements Runnable {
 			}
             
         }
-    }
-
-    /**
-     * Removes a client from the client list when the client disconnects.
-     * @param client The client to be removed.
-     */
-    public void removeClient(GameClientHandler client) {
-        clients.remove(client);
-    }
-
-
-    /**
-     * To get the number of clients currently connected to the server
-     * @return The number of clients connected to the server
-     */
-    public int getClientCount() {
-        return clients.size();
     }
 }

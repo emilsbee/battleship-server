@@ -2,24 +2,18 @@ package server.tests;
 
 // External imports
 import org.junit.jupiter.api.*;
-
-import protocol.ProtocolMessages;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
 // Internal imports
+import protocol.ProtocolMessages;
 import server.GameServer;
 import tui.TerminalColors;
 
@@ -36,79 +30,53 @@ public class GameServerTest {
     public static void setUpServer() {
         System.setOut(new PrintStream(outContent));
         server = new GameServer(new String[]{String.valueOf(GameServerTest.PORT)}); 
-        new Thread(server).start();
     }
 
     @Test
     void testServerInitialisation() {
+        // Asserts that the actual output in terminal indicates that server was started without any exceptions
         assertEquals(
-            TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET+"\n" + 
+            GameServer.SERVER_START_MESSAGE+"\n" + 
             TerminalColors.GREEN_BOLD + "Server started on port " + GameServerTest.PORT + TerminalColors.RESET+"\n" +
-            TerminalColors.BLUE_BOLD + "Listening for player connections..." + TerminalColors.RESET+"\n",
+            GameServer.SERVER_LISTENING_FOR_CONNECTIONS_MESSAGE+"\n" +
+            GameServer.SERVER_NEW_CLIENT_MESSAGE +"\n" +
+            GameServer.SERVER_LISTENING_FOR_CONNECTIONS_MESSAGE+"\n" +
+            "Game " + 1 + ": Player 1 added. Player name: " + GameServerTest.FIRST_PLAYER_NAME+"\n" ,
             outContent.toString() 
         );
         outContent.reset();
 
+        // Asserts that the server socket was established for listening
         assertNotNull(server.getServerSocket());
-        assertEquals(0, server.getGameCount());
     }
 
     @Test 
-    void testFirstClientConnection() {
-        int gameId = 1;
+    void testClientConnection() {
         Socket pingSocket = null;
         PrintWriter out = null;
-        
+        BufferedReader in = null;
+
         try {
+            // Establish connection to server, and socket reading/writing
             pingSocket = new Socket("localhost", GameServerTest.PORT);
             out = new PrintWriter(pingSocket.getOutputStream(), true);
-        } catch (IOException e) {
-            return;
-        }
+            in = new BufferedReader(new InputStreamReader(pingSocket.getInputStream()));
 
-        out.println(ProtocolMessages.HANDSHAKE+ProtocolMessages.DELIMITER+GameServerTest.FIRST_PLAYER_NAME); // Send a handshake
-       
-        assertNotNull(server.getServerSocket()); // Assert that the server socket is still listening
-        assertEquals(gameId, server.getGameCount()); // Assert that the first game has been created
-        assertEquals(server.getClientCount(), 1);
+            // Test that handshake with the server works which indicates that both sending and recieving messages works and that server succesfully accepts new clients
+            out.println(ProtocolMessages.HANDSHAKE+ProtocolMessages.DELIMITER+GameServerTest.FIRST_PLAYER_NAME); // Send a handshake
+            
+            assertEquals(ProtocolMessages.HANDSHAKE, in.readLine()); // Read recieved handshake from server
 
-        try {
-			pingSocket.close();
+            assertNotNull(server.getServerSocket()); // Assert that the server socket is still listening
+
+            // Close the connection to server and communication with server
+            pingSocket.close();
             out.close();
-		} catch (IOException e) {
-		    
-		}
+            in.close();
+        } catch (IOException e) {
+            
+        }
     }
-
-    // @Test
-    // void testSecondClientConnection() {
-    //     Socket pingSocket = null;
-    //     PrintWriter out = null;
-        
-    //     try {
-    //         pingSocket = new Socket("localhost", GameServerTest.PORT);
-    //         out = new PrintWriter(pingSocket.getOutputStream(), true);
-    //     } catch (IOException e) {
-    //         return;
-    //     }
-
-    //     out.println(ProtocolMessages.HANDSHAKE+ProtocolMessages.DELIMITER+GameServerTest.FIRST_PLAYER_NAME); // Send a handshake
-
-    //     assertEquals(outContent.toString(), TerminalColors.GREEN_BOLD + "New client connected!" + TerminalColors.RESET+"\n"); // Asert that new client indeed has connected
-    //     assertEquals(outContent.toString(), TerminalColors.GREEN_BOLD + "somethinge" + TerminalColors.RESET+"\n"); // Asert that new client indeed has connected
-    //     assertNotNull(server.getServerSocket()); // Assert that the server socket is still listening
-    //     assertEquals(server.getGameCount(), 1); // Assert that the first game has been created
-
-
-    //     outContent.reset();
-        
-    //     try {
-	// 		pingSocket.close();
-    //         out.close();
-	// 	} catch (IOException e) {
-		    
-	// 	}
-    // }
 
     @AfterAll
 	static void restoreStream() {
