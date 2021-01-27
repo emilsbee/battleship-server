@@ -226,7 +226,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 				sendMessage(ProtocolMessages.HANDSHAKE);
                 game.setPlayer(this);
 			} catch (ClientUnavailableException e) {
-                exit();
                 view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
                 shutdown();
 			}
@@ -243,7 +242,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
         try {
 			sendMessage(ProtocolMessages.NAME_EXISTS);
 		} catch (ClientUnavailableException e) {
-            exit();
             view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
             shutdown();
 		}
@@ -254,7 +252,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 		try {
 			sendMessage(ProtocolMessages.ENEMYNAME+ProtocolMessages.DELIMITER+playerName);
 		} catch (ClientUnavailableException e) {
-            exit();
             view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
             shutdown();
 		}
@@ -273,7 +270,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 		try {
 			sendMessage(ProtocolMessages.SETUP+ProtocolMessages.DELIMITER+playerName);
 		} catch (ClientUnavailableException e) {
-            exit();
             view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
             shutdown();
 		}
@@ -306,7 +302,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
 			    nextPlayerName
 			);
 		} catch (ClientUnavailableException e) {
-            exit();
             view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
             shutdown();
 		}
@@ -318,7 +313,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
         try {
 			sendMessage(ProtocolMessages.GAMEOVER+ProtocolMessages.DELIMITER+playerName+ProtocolMessages.DELIMITER+winType);
 		} catch (ClientUnavailableException e) {
-            exit();
             view.showMessage(TerminalColors.RED_BOLD + e.getMessage() + TerminalColors.RESET);
             shutdown();
 		}
