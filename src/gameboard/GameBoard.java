@@ -58,9 +58,13 @@ public class GameBoard {
             isHit = true;
         }
 
-        // Checks for whether ship was sunk
-        if (hasSunk(x, y)) {
-            isSunk = true;
+        makeMove(x, y); // Makes the move 
+
+        // Only checks if a ship sunk in the case that a ship was hit.
+         // That's because there could be a case where player fires at a field
+         // that already has a sunk ship and the player shouldn't receive a point for that.
+        if (isHit) {
+            isSunk = hasSunk(x, y);
         }
 
         update[0] = isHit;
@@ -92,23 +96,19 @@ public class GameBoard {
     }
 
     /**
-     * This method actually makes the move on this board and then checks whether it resulted in a ship that sunk.
-     * So it also accepts moves on fields that were previously fired upon in which case it just returns false for whether a ship sunk.
+     * This method checks whether whether certain coordinates are part of a sunk ship.
+     * This is only for single player because in multiplayer the server would do this instead.
      * @param x The X coordinate of the move.
      * @param y The Y coordinate of the move.
      * @return Whether a ship was sunk as a result of the move.
      */
-    private boolean hasSunk(int x, int y) {
+    public boolean hasSunk(int x, int y) {
         boolean hasSunk = true; // Indicator for whether ship was sunk
 
         String fieldName = board[x][y]; // The name of the field that the move was made upon
 
-        // Since all the field names that are more than one word long are seprated by _ (underscore)
-        // this is the array of all the words from the field being moved upon.
-        String[] splitFieldName = board[x][y].split("_"); 
-
         // The first word in the field being moved upon. This indicates what kind of field and what kind of ship it is.
-        String fieldNameBeginning = splitFieldName[0];
+        String fieldNameBeginning = board[x][y].split("_")[0];
 
         // All ships are placed horizontally and the ships start is on the left side. So they are placed from left to right.
         // So to check whether a ships has sunk, the start coordinate, x1, has to be found and the end coordinate, x2,
@@ -116,89 +116,80 @@ public class GameBoard {
         int x1; 
         int x2;
 
-        if (!fieldName.endsWith(GameConstants.FIELD_TYPE_HIT_EXTENSION)) { // If the field wasn't previously fired on
-
-            board[x][y] = fieldName+GameConstants.FIELD_TYPE_HIT_EXTENSION; // Adding the hit extension to whatever field this previously was
         
-            if (fieldNameBeginning.equals(GameConstants.FIELD_TYPE_PATROL)) { // If the field is a patrol ship
+        if (fieldNameBeginning.equals(GameConstants.FIELD_TYPE_PATROL)) { // If the field is a patrol ship
 
+            x1 = x;
+            x2 = x;
+
+        } else if (fieldName.startsWith("SUPER_PATROL")) { // If the field is super patrol ship
+            
+            if (fieldName.endsWith("FRONT_HIT")) {
                 x1 = x;
+                x2 = x+1;
+            } else {
+                x1 = x-1;
                 x2 = x;
-
-            } else if (fieldName.startsWith("SUPER_PATROL") && !fieldName.endsWith(GameConstants.FIELD_TYPE_HIT_EXTENSION)) { // If the field is super patrol ship
-                
-                if (fieldName.endsWith("FRONT")) {
-                    x1 = x;
-                    x2 = x+1;
-                } else {
-                    x1 = x-1;
-                    x2 = x;
-                }
-    
-            } else if (fieldName.startsWith("DESTROYER") && !fieldName.endsWith(GameConstants.FIELD_TYPE_HIT_EXTENSION)) { // If the field is destroyer ship
-    
-                if (fieldName.endsWith("FRONT")) {
-                    x1 = x;
-                    x2 = x+2;
-                } else if (fieldName.endsWith("MID")) {
-                    x1 = x-1;
-                    x2 = x+1;
-                } else {
-                    x1 = x-2;
-                    x2 = x;
-                }
-    
-            } else if (fieldName.startsWith("BATTLESHIP") && !fieldName.endsWith(GameConstants.FIELD_TYPE_HIT_EXTENSION)) { // If the field is battleship
-    
-                if (fieldName.endsWith("FRONT")) {
-                    x1 = x;
-                    x2 = x+3;
-                } else if (fieldName.endsWith("FRONT_MID")) {
-                    x1 = x-1;
-                    x2 = x+2;
-                } else if (fieldName.endsWith("BACK_MID")) {
-                    x1 = x-2;
-                    x2 = x+1;
-                } else {
-                    x1 = x-3;
-                    x2 = x;
-                }
-    
-            } else if (fieldName.startsWith("CARRIER") && !fieldName.endsWith(GameConstants.FIELD_TYPE_HIT_EXTENSION)) { // If the field is carrier
-    
-                if (fieldName.endsWith("FRONT")) {
-                    x1 = x;
-                    x2 = x+4;
-                } else if (fieldName.endsWith("FRONT_MID")) {
-                    x1 = x-1;
-                    x2 = x+3;
-                } else if (fieldName.endsWith("MID")) {
-                    x1 = x-2;
-                    x2 = x+2;
-                } else if (fieldName.endsWith("BACK_MID")) {
-                    x1 = x-3;
-                    x2 = x+1;
-                } else {
-                    x1 = x-4;
-                    x2 = x;
-                }
-    
-            } else { // If the field is water
-                return false;
-            }
-    
-            // The loop that iterates from start of the ship to the end to check whether all parts of it are hit.
-            for (int i = x1; i <= x2; i++) {
-                if (!board[i][y].endsWith(GameConstants.FIELD_TYPE_HIT_EXTENSION)) {
-                    hasSunk = false;
-                }
-    
             }
 
-        } else { // If this field was previously fired upon already
+        } else if (fieldName.startsWith("DESTROYER")) { // If the field is destroyer ship
 
-            hasSunk = false;
-        
+            if (fieldName.endsWith("FRONT_HIT")) {
+                x1 = x;
+                x2 = x+2;
+            } else if (fieldName.endsWith("MID_HIT")) {
+                x1 = x-1;
+                x2 = x+1;
+            } else {
+                x1 = x-2;
+                x2 = x;
+            }
+
+        } else if (fieldName.startsWith("BATTLESHIP")) { // If the field is battleship
+
+            if (fieldName.endsWith("FRONT_HIT")) {
+                x1 = x;
+                x2 = x+3;
+            } else if (fieldName.endsWith("FRONT_MID_HIT")) {
+                x1 = x-1;
+                x2 = x+2;
+            } else if (fieldName.endsWith("BACK_MID_HIT")) {
+                x1 = x-2;
+                x2 = x+1;
+            } else {
+                x1 = x-3;
+                x2 = x;
+            }
+
+        } else if (fieldName.startsWith("CARRIER")) { // If the field is carrier
+
+            if (fieldName.endsWith("FRONT_HIT")) {
+                x1 = x;
+                x2 = x+4;
+            } else if (fieldName.endsWith("FRONT_MID_HIT")) {
+                x1 = x-1;
+                x2 = x+3;
+            } else if (fieldName.endsWith("BACK_MID_HIT")) {
+                x1 = x-3;
+                x2 = x+1;
+            } else if (fieldName.endsWith("MID_HIT")) {
+                x1 = x-2;
+                x2 = x+2;
+            } else {
+                x1 = x-4;
+                x2 = x;
+            }
+
+        } else { // If the field is water
+            return false;
+        }
+
+        // The loop that iterates from start of the ship to the end to check whether all parts of it are hit.
+        for (int i = x1; i <= x2; i++) {
+            if (!board[i][y].endsWith(GameConstants.FIELD_TYPE_HIT_EXTENSION)) {
+                hasSunk = false;
+            }
+
         }
         
         return hasSunk;
@@ -221,6 +212,3 @@ public class GameBoard {
         return this.board;
     }
 }
-
-
- 

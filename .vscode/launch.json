@@ -6,17 +6,17 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Launch Current File",
-            "request": "launch",
-            "mainClass": "${file}"
-        },
-        {
-            "type": "java",
             "name": "Launch GameServer",
             "request": "launch",
             "mainClass": "server.GameServer",
-            "projectName": "battleship-server_651407a7"
-            // "args": "8888ls"
+            "projectName": "battleship-server_b338ec42",
+            "args": "8888"
+        },
+        {
+            "type": "java",
+            "name": "Launch Current File",
+            "request": "launch",
+            "mainClass": "${file}"
         }
     ]
 }
