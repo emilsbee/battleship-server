@@ -27,6 +27,9 @@ import tui.TerminalColors;
  * from this class and this class calls method of game. Hence it is a middle man between the client and the game. 
  */
 public class GameClientHandler implements Runnable, ServerProtocol {
+    public static final String HANDSHAKE_EXCEPTION_MSG = "Client didn't provide name in the handshake."; 
+    public static final String MOVE_EXCEPTION_MSG = "Client didn't provide correct x and y values.";
+
     // The socket input and output streams    
     private BufferedReader in;
     private BufferedWriter out;
@@ -49,8 +52,9 @@ public class GameClientHandler implements Runnable, ServerProtocol {
     // Re-usable timer variable for scheduling the player move timer task
     private Timer timer;
 
-    // Server instance
-    private GameServer server;
+    public GameClientHandler() {
+        
+    }
 
     /**
      * Constructs a new GameClientHandler. Opens the BufferedWriter and BufferedReader.
@@ -58,7 +62,7 @@ public class GameClientHandler implements Runnable, ServerProtocol {
      * @param game The game instance.
      * @param view the terminal view of the server for displaying messages and prompting questions.
 	 */
-    public GameClientHandler(Socket socket, Game game, GameServerTUI view, GameServer server) {
+    public GameClientHandler(Socket socket, Game game, GameServerTUI view) {
         try {
 
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -66,7 +70,6 @@ public class GameClientHandler implements Runnable, ServerProtocol {
             this.socket = socket;
             this.game = game;
             this.view = view;
-            this.server = server;
         } catch (IOException e) {
             view.showMessage("Game "+ game.getGameId() + ", player: " + name + " is having an IO problem creating input and output streams.");
             shutdown();
@@ -117,7 +120,7 @@ public class GameClientHandler implements Runnable, ServerProtocol {
                 String playerName = input.split(";")[1];
                 handleHello(playerName);
             } catch (ArrayIndexOutOfBoundsException e) {
-                throw new ProtocolException("Client didn't provide name in the handshake.");
+                throw new ProtocolException(GameClientHandler.HANDSHAKE_EXCEPTION_MSG);
             }
 
 		} else if (input.split(";")[0].equals(ProtocolMessages.CLIENTBOARD)) { // Client sends their game board 
@@ -133,7 +136,7 @@ public class GameClientHandler implements Runnable, ServerProtocol {
                     int y = Integer.parseInt(input.split(";")[2]);
                     move(x, y);
                 } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
-                    throw new ProtocolException("Client didn't provide correct x and y values.");
+                    throw new ProtocolException(GameClientHandler.MOVE_EXCEPTION_MSG);
                 }
             
             }

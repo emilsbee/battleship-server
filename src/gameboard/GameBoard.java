@@ -58,7 +58,10 @@ public class GameBoard {
             isHit = true;
         }
 
-        makeMove(x, y); // Makes the move 
+        // Makes the move
+        if (!board[x][y].endsWith(GameConstants.FIELD_TYPE_HIT_EXTENSION)) {  
+            board[x][y] = board[x][y] + GameConstants.FIELD_TYPE_HIT_EXTENSION;
+        } 
 
         // Only checks if a ship sunk in the case that a ship was hit.
          // That's because there could be a case where player fires at a field

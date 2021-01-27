@@ -36,6 +36,10 @@ public class GameServer implements Runnable {
     private int port;
 
 
+    /**
+     * Getter for the server socket
+     * @return The server socket.
+     */
     public ServerSocket getServerSocket() {
         return this.serverSocket;
     }
@@ -104,7 +108,7 @@ public class GameServer implements Runnable {
                         game = new Game(view, gameCount);
                         
                         // Creates and starts a new client handler
-                        GameClientHandler handler = new GameClientHandler(socket, game, view, this);
+                        GameClientHandler handler = new GameClientHandler(socket, game, view);
                         new Thread(handler).start();
                         
                         // Indicates that someone is waiting for a game
@@ -113,7 +117,7 @@ public class GameServer implements Runnable {
                     } else { // If somebody is waiting for an opponent
 
                         // Creates amd starts a new client handler
-                        GameClientHandler handler = new GameClientHandler(socket, game, view, this);
+                        GameClientHandler handler = new GameClientHandler(socket, game, view);
                         new Thread(handler).start();
 
                         // Indicates that nobody is waiting for a game
@@ -158,5 +162,13 @@ public class GameServer implements Runnable {
 			}
             
         }
+    }
+
+    public void shutdownServer()  {
+        try {
+			serverSocket.close();
+		} catch (IOException e) {
+			System.exit(0);
+		}
     }
 }

@@ -62,7 +62,8 @@ public class GameServerTest {
             out = new PrintWriter(pingSocket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(pingSocket.getInputStream()));
 
-            // Test that handshake with the server works which indicates that both sending and recieving messages works and that server succesfully accepts new clients
+            // Test that handshake with the server works which indicates that both sending and recieving messages works and that server succesfully accepts new clients.
+            // This test also partly tests the GameClientHandler
             out.println(ProtocolMessages.HANDSHAKE+ProtocolMessages.DELIMITER+GameServerTest.FIRST_PLAYER_NAME); // Send a handshake
             
             assertEquals(ProtocolMessages.HANDSHAKE, in.readLine()); // Read recieved handshake from server
@@ -81,5 +82,6 @@ public class GameServerTest {
     @AfterAll
 	static void restoreStream() {
         System.setOut(originalOut);
+        server.shutdownServer();
 	}
 }
