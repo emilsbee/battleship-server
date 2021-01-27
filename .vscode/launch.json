@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Launch GameBoard",
+            "request": "launch",
+            "mainClass": "gameboard.GameBoard",
+            "projectName": "battleship-server_651407a7"
+        },
+        {
+            "type": "java",
             "name": "Launch GameServer",
             "request": "launch",
             "mainClass": "server.GameServer",

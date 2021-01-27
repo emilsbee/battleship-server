@@ -2,6 +2,7 @@ package gameboard;
 
 // Internal imports
 import constants.GameConstants;
+import tui.TerminalColors;
 
 /**
  * This class represents a game board for a client. It makes moves on the board and keeps track of what has been already hit
@@ -13,7 +14,7 @@ public class GameBoard {
 
     // The encdoded game board sent in by client
     private String encodedBoard;
-    
+
     /**
      * Initialises the encoded, and decoded game boards.
      * @param encodedBoard The encoded game board sent in by the client.
@@ -213,5 +214,53 @@ public class GameBoard {
      */
     public String[][] getBoard() {
         return this.board;
+    }
+
+
+
+
+
+
+
+
+
+
+        /**
+     * Prints specific lines for the board a specific amount of times.
+     * @param code The code given as a parameter to see what kind of line it needs to be.
+     * @param amount the amount of times it needs to be printed.
+     */
+    public void printBoardLine(String code, int amount){
+        for(int i = 0; i < amount; i++){
+            switch (code) {
+                case "black": 
+                    System.out.print(TerminalColors.BLACK_BACKGROUND + " "+ TerminalColors.RESET);
+                    break;
+                case "blue":
+                    System.out.print(TerminalColors.BLUE_BACKGROUND + " "+ TerminalColors.RESET);
+                    break;
+                case "white":
+                    System.out.print(TerminalColors.WHITE_BACKGROUND + " "+ TerminalColors.RESET);
+                    break;
+                case "ship":
+                    System.out.print(TerminalColors.BLACK_FONT_WHITE_BACKGROUND + "S" + TerminalColors.RESET);
+                    break;
+                case "ship-hit":
+                    System.out.print(TerminalColors.BLACK_FONT_RED_BACKGROUND + "S" + TerminalColors.RESET);
+                    break;
+                case "space":
+                    System.out.print(" ");
+                    break;
+                case "newLine":
+                    System.out.println(" ");
+                    break;
+                case "cyan":
+                    System.out.print(TerminalColors.CYAN_BACKGROUND + " "+ TerminalColors.RESET);
+                    break;
+                case "red":
+                    System.out.print(TerminalColors.RED_BACKGROUND + " "+ TerminalColors.RESET);
+                   break;
+            }
+       }
     }
 }
