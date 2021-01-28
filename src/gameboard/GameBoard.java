@@ -7,6 +7,7 @@ import tui.TerminalColors;
 /**
  * This class represents a game board for a client. It makes moves on the board and keeps track of what has been already hit
  * and whether a certain ship has sunk. It is always created from an encoded board sent in by the client which is then decoded here.
+ * @inv board != null, encodedBoard != null
  */
 public class GameBoard {
     // The game board
@@ -18,6 +19,8 @@ public class GameBoard {
     /**
      * Initialises the encoded, and decoded game boards.
      * @param encodedBoard The encoded game board sent in by the client.
+     * @pre encodedBoard != null
+     * @post ensures that encodedBoard, board are initialised and that the encdodedBoard is decoded
      */
     public GameBoard(String encodedBoard) {
         this.encodedBoard = encodedBoard;
@@ -28,6 +31,8 @@ public class GameBoard {
     /**
      * Decodes and sets the encoded board that was sent in by the client.
      * @param encodedBoard The board to decode.
+     * @pre encodedBoard != null, board != null
+     * @post ensures that the encodedBoard is decoded and set as the board
      */
     public void decodeBoard(String encodedBoard) {
         String[] splitEncodedBoard = encodedBoard.split(";");
@@ -48,6 +53,8 @@ public class GameBoard {
      * @param x The X coordinate of the move.
      * @param y The Y coordinate of the move.
      * @return Information about whether a ship was hit, whether that hit resulted in sinking the ship, and whether all ships have been destroyed.
+     * @pre x >= 0 && x < 15, y >= 0 && y < 10, board != null
+     * @post ensures that the move is made and results of whether ship is hit and sunk and whether all ships are destroyed
      */
     public boolean[] makeMove(int x, int y) {
         boolean[] update = new boolean[3];
@@ -80,6 +87,8 @@ public class GameBoard {
     /**
      * Checks whether all ships have been destroyed on this board.
      * @return Whether all ships have been destroyed or not.
+     * @pre board != null
+     * @post ensures that a check is made for this board about whether all the ships are destroyed and returns the result
      */
     public boolean allShipsDestroyed() {
         boolean allShipsDestroyed = true;
@@ -105,6 +114,8 @@ public class GameBoard {
      * @param x The X coordinate of the move.
      * @param y The Y coordinate of the move.
      * @return Whether a ship was sunk as a result of the move.
+     * @pre x >= 0 && x < 15, y >= 0 && y < 10, board != null
+     * @post ensures that a check is made for whether a ship in given coordinates has sunk
      */
     public boolean hasSunk(int x, int y) {
         boolean hasSunk = true; // Indicator for whether ship was sunk
@@ -202,6 +213,8 @@ public class GameBoard {
     /**
      * Getter for getting the encoded board.
      * @return The encoded board.
+     * @pre encodedBoard != null
+     * @post ensures that the encoded board is returned
      */
     public String getEncodedBoard() {
         return this.encodedBoard;
@@ -211,6 +224,8 @@ public class GameBoard {
     /**
      * Getter for getting the decoded board.
      * @return The decoded board.
+     * @pre board != null
+     * @post ensures that the decoded board is returned
      */
     public String[][] getBoard() {
         return this.board;

@@ -14,6 +14,7 @@ import tui.GameServerTUI;
  * loop runs on the thread. This class keeps track of player moves and updates them on the respective game boards. It also keeps track
  * of player points. This class mainly communicates with game client handle threads to inform clients about what's going on in the game and
  * receive moves from them.
+ * @inv view != null, gameId >= 0, player1Point >= 0, player2Points >= 0, random != null
  */
 public class Game implements Runnable {
     // The id of the game
@@ -38,7 +39,7 @@ public class Game implements Runnable {
     private boolean gameStarted;
 
     // Re-usable random
-    Random random;
+    private Random random;
 
     // Indicates which players move it is. The player's names are used for this indicator.
     private String currentMove;
@@ -49,12 +50,16 @@ public class Game implements Runnable {
     // The thread on which 5 minute game loop runs
     private Thread gameThread;
 
+    // Indicates whether a player has quit before the game has started
     private boolean quitBeforeStart;
+    
     /**
      * Constructor that initialises this game's id, the terminal view, and sets the game started to false
      * since the game only starts after both players have sent in their boards. Also initialises both player's points to 0.
      * @param view The server's TUI.
      * @param gameId The id of this game given by the server.
+     * @pre view != null, gameid >= 0
+     * @post ensures that gameId, view, random are initialised. player1Points == 0, player2Points == 0, gameStarted == false 
      */
     public Game(GameServerTUI view, int gameId) {
         this.gameId = gameId; 
@@ -72,6 +77,9 @@ public class Game implements Runnable {
      * have to be accurate to milliseconds. It is also decided in this thread which player goes first 
      * and that's randomly found by the {@link #decideWhoStart()} methods. Then both players are informed 
      * about this with the game setup message. 
+     * @pre player1 != null, player2 != null, view != null
+     * @post ensures that it is decided which player goes first and both players are informed of that, 
+     * And that a 5 minute game loop is started after which both players are informed of the results of the game if it ended due to time running out.
      */
     @Override
 	public void run() {
@@ -106,6 +114,7 @@ public class Game implements Runnable {
     /**
      * Method to start the game by creating a separate thread for it. This is only called
      * after both players have submitted their boards.
+     * @post ensures that the game loop thread is started
      */
     public void startGame() {
         gameStarted = true;
@@ -118,6 +127,8 @@ public class Game implements Runnable {
      * @param timeFinished Indicates whether game is over because 5 minutes are up.
      * @param quitPlayerName Indicates whether the game is over because one of the players quit.
      * @param winnerName Indicates who won in the case that all ships are destroyed in the game for one of the players.
+     * @post ensures that both players are informed of the results of the game and quitBeforeStarting is set to true if one of the players
+     * quit before game began. Also sets the gameStarted to false since calling endGame indicates that the game has ended.
      */
     public void endGame(boolean timeFinished, String quitPlayerName, String winnerName) {
 
@@ -185,6 +196,9 @@ public class Game implements Runnable {
      * @param x X coordinate of the move. 
      * @param y Y coordinate of the move.
      * @param isLate Indicates whether the move was actually made by the client or the timer sent it due to late move.
+     * @pre x >= 0 && x < 15, y >= 0 && y < 10, player1 != null, player2 != null, currentMove != null
+     * @post ensures that a move is made on behalf of one of the clients. Calls endGame if one player quits or destroyes opponents ships. Also,
+     * updates currentMove and previousMove as appropriate and starts the move timer on the player that goes next.
      */
     public synchronized void makeMove(int x, int y, boolean isLate) {
         if (player1.getSocket() == null) {
@@ -310,6 +324,8 @@ public class Game implements Runnable {
      * this method is called by the GameClientHandler thread to add the client to the game. 
      * Starting from player1. So player1 will always be the first connected, then player 2.
      * @param player The player instance to be added to the game.
+     * @pre player != null, view != null
+     * @post ensures that the given player is set as player1 if player1 == null or as player2 if player2 == null.
      */
     public synchronized void setPlayer(GameClientHandler player) {
         if (player1 == null) {
@@ -330,6 +346,8 @@ public class Game implements Runnable {
      * After both players have connected and their unique names are stored in this class
      * this method is called and it sends the players their opponent's name.
      * The message is sent through the respective player's GameClientHandler {@link #sendMessage()} method.
+     * @pre player1 != null, player2 != null
+     * @post ensures that both players are notified of their opponent's name
      */
     public void sendEnemyName() {
         player1.enemyName(player2.getName());
@@ -345,6 +363,8 @@ public class Game implements Runnable {
      * must be synchronized.
      * @param board The board to be set.
      * @param playerName The name of the player for which the board is to be set.
+     * @pre encodedBoard != null, playerName != null, player1 != null, player2 != null
+     * @post sets the respective clients decoded board
      */
     public synchronized void setBoard(String encodedBoard, String playerName) {
         if (player1.getName().equals(playerName)) {
@@ -376,6 +396,7 @@ public class Game implements Runnable {
      * This method is synchronized because it could potentially be called by boht threads at once.
      * @param playerName The name to be checked
      * @return Whether the name can be used in this game.
+     * @post ensures that returned value indicates whether the given player name is already taken by the opponent
      */
     public synchronized boolean isValidPlayerName(String playerName) {
         return (
@@ -387,6 +408,8 @@ public class Game implements Runnable {
     /**
      * Randomly determines which players goes first.
      * @return The name of the player that goes first.
+     * @pre ranomd != null, player1 != null, player2 != null
+     * @post ensures that the player who goes first is chosen randomly and returned
      */
     public String decideWhoStart() {
         int whoStarts = random.nextInt(2);
@@ -400,6 +423,8 @@ public class Game implements Runnable {
     /**
      * Getter to get the current game's id that is assigned to it by the server.
      * @return The id of the game.
+     * @pre gameId >= 0
+     * @post ensured that the correct gameId is returned
      */
     public int getGameId() {
         return gameId;
@@ -408,6 +433,7 @@ public class Game implements Runnable {
     /**
      * Getter to check whether the game has ended.
      * @return Whether the game has ended.
+     * @post ensures that the indicator for whether game has started is returned
      */
     public boolean getGameStarted() {
         return this.gameStarted;
@@ -416,6 +442,8 @@ public class Game implements Runnable {
     /**
      * Getter for who has the current move in the game.
      * @return The player name who has the current move.
+     * @pre currentMove != null
+     * @post ensures that the name of the player with the current move is returned
      */
     public String getCurrentMove() {
         return currentMove;
@@ -423,6 +451,8 @@ public class Game implements Runnable {
 
     /**
      * Getter for player 1 points
+     * @pre player1Points >= 0
+     * @post ensures that player1Points are returned
      */
     public int getPlayer1Points() {
         return this.player1Points;
@@ -430,6 +460,8 @@ public class Game implements Runnable {
 
     /**
      * Getter for player 2 points
+     * @pre player2Points >= 0
+     * @post ensures that player2Points are returned
      */
     public int getPlayer2Points() {
         return this.player2Points;

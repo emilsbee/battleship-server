@@ -14,6 +14,7 @@ import tui.TerminalColors;
 
 /**
  * This class represents the game server that accepts clients and matches them up for a game. 
+ * @inv view != null, gameId >= 0
  */
 public class GameServer implements Runnable {
     public static final String SERVER_START_MESSAGE = TerminalColors.BLUE_BOLD + "Welcome to the Battleship game server!" + TerminalColors.RESET;
@@ -39,6 +40,7 @@ public class GameServer implements Runnable {
     /**
      * Getter for the server socket
      * @return The server socket.
+     * @post ensures that the server socket is returned
      */
     public ServerSocket getServerSocket() {
         return this.serverSocket;
@@ -47,6 +49,7 @@ public class GameServer implements Runnable {
     /**
      * Starts the server on a new thread.
      * @param args May include the server port,
+     * @post ensures that a new GameServer isntance is created
      */
     public static void main(String[] args) {
         new GameServer(args);
@@ -59,6 +62,9 @@ public class GameServer implements Runnable {
      * to prompt the user for a port. Also initialises the gameCount (which is basically id of games) to 0
      * and starts a new TUI.
      * @param args May include the server port.
+     * @post ensures that the view is initialised and that the game server thread is called. As well as
+     * that a check is made for whether the main method passed a valid port number. If it did and the port is actual number, that 
+     * number is used, but if a non number value is passed the port is set to 0. 
      */
     public GameServer(String[] args) {
         if (args.length >= 1) { 
@@ -85,6 +91,8 @@ public class GameServer implements Runnable {
      * Server's loop for listening for new client connections. To pair up clients for games it uses a simple
      * approach whereby first client connected waits until someone else connects and then they are paired for a game.
      * Then next client that connects again waits for an opponent and so forth.
+     * @pre view != null
+     * @post ensures that new client connections are accepted and they are added to games. 
      */
 	@Override
 	public void run() {
@@ -144,6 +152,8 @@ public class GameServer implements Runnable {
      * Sets up a server socket on a specific port that is either given by the user or is prompted. 
      * @throws ServerSocketException
      * @throws ExitProgram if socket can't be created on the specific port.
+     * @pre view != null
+     * @post ensures that an attempt is made at setting up the server socket
      */
     public void setup() throws ServerSocketException  {
         serverSocket = null;
@@ -164,6 +174,11 @@ public class GameServer implements Runnable {
         }
     }
 
+    /**
+     * Closes the server socket
+     * @pre serverSocket != null
+     * @post ensures that an attempt is made at closing the socket.
+     */
     public void shutdownServer()  {
         try {
 			serverSocket.close();
