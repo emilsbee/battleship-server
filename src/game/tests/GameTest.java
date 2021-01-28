@@ -17,7 +17,7 @@ import java.net.Socket;
 
 // Internal imports
 import game.Game;
-import gameboard.GameBoard;
+import game.GameBoard;
 import protocol.ProtocolMessages;
 import server.GameServer;
 import tui.GameServerTUI;

@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit;
 
 // Internal imports
 import client_handler.GameClientHandler;
-import gameboard.GameBoard;
 import tui.GameServerTUI;
 
 /**

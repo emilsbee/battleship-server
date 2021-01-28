@@ -1,4 +1,4 @@
-package gameboard.tests;
+package game.tests;
 
 // External imports
 import static org.junit.Assert.assertFalse;
@@ -7,7 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 // Internal imports
-import gameboard.GameBoard;
+import game.GameBoard;
 import constants.GameConstants;
 
 public class GameBoardTest {

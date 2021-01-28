@@ -1,4 +1,4 @@
-package gameboard;
+package game;
 
 // Internal imports
 import constants.GameConstants;
