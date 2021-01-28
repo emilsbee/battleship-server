@@ -14,8 +14,6 @@ import exceptions.ClientUnavailableException;
 // Internal imports
 import exceptions.ProtocolException;
 import game.Game;
-import protocol.ProtocolMessages;
-import protocol.ServerProtocol;
 import tui.GameServerTUI;
 import tui.TerminalColors;
 

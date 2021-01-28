@@ -1,4 +1,4 @@
-package protocol;
+package server;
 
 /**
  * Interface that must be implemented by a class that communicates with a client.

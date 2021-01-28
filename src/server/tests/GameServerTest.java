@@ -13,7 +13,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 // Internal imports
-import protocol.ProtocolMessages;
+import server.ProtocolMessages;
 import server.GameServer;
 import tui.TerminalColors;
 

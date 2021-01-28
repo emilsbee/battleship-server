@@ -13,7 +13,7 @@ import java.net.Socket;
 // Internal imports
 import server.GameClientHandler;
 import exceptions.ProtocolException;
-import protocol.ProtocolMessages;
+import server.ProtocolMessages;
 import server.GameServer;
 
 
