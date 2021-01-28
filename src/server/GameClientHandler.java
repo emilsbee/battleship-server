@@ -186,7 +186,7 @@ public class GameClientHandler implements Runnable, ServerProtocol {
      * @post ensures that an attempt is made at sending the given message to the client, and informs
      * the user if the sending fails.
      */
-    public void sendMessage(String message) throws ClientUnavailableException  {
+    private void sendMessage(String message) throws ClientUnavailableException  {
         if (out != null) {
             try {
                 out.write(message);
