@@ -1,4 +1,4 @@
-package client_handler;
+package server;
 
 // External imports
 import java.io.BufferedWriter;

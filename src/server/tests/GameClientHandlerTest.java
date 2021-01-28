@@ -1,4 +1,4 @@
-package client_handler.tests;
+package server.tests;
 
 // External imports
 import org.junit.jupiter.api.*;
@@ -11,7 +11,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 // Internal imports
-import client_handler.GameClientHandler;
+import server.GameClientHandler;
 import exceptions.ProtocolException;
 import protocol.ProtocolMessages;
 import server.GameServer;
