@@ -115,7 +115,7 @@ public class Game implements Runnable {
      * after both players have submitted their boards.
      * @post ensures that the game loop thread is started
      */
-    public void startGame() {
+    private void startGame() {
         gameStarted = true;
         gameThread = new Thread(this);
         gameThread.start();
@@ -348,7 +348,7 @@ public class Game implements Runnable {
      * @pre player1 != null, player2 != null
      * @post ensures that both players are notified of their opponent's name
      */
-    public void sendEnemyName() {
+    private void sendEnemyName() {
         player1.enemyName(player2.getName());
         player2.enemyName(player1.getName());
     }
@@ -410,7 +410,7 @@ public class Game implements Runnable {
      * @pre ranomd != null, player1 != null, player2 != null
      * @post ensures that the player who goes first is chosen randomly and returned
      */
-    public String decideWhoStart() {
+    private String decideWhoStart() {
         int whoStarts = random.nextInt(2);
         if (whoStarts == 0) {
             return player1.getName();
