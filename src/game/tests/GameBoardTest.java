@@ -85,7 +85,9 @@ public class GameBoardTest {
     }
 
     /**
-     * Test the method allShipsDestroyed() which check whether or not all the ships on the board have been hit & sunk
+     * Test the method allShipsDestroyed() which check whether or not all the ships on the board have been hit & sunk.
+     * The test iterates over the whole board and hits every ship asserting that first off it is hit and secondly that it is sunk. 
+     * After the iteration of board is done, it is expected that all the ships are destroyed.
      */
     @Test 
     public void allShipsDestroyedTest() {
